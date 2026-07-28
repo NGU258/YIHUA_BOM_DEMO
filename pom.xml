@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <description>这个项目就是自己纯手搓的了</description>
+
+<!-- 这个是我当前项目的GAV坐标(类似于Maven项目中的身份证) 别人依赖我这个项目时就会用到我的GAV-->
+    <groupId>com.yihua</groupId> <!--公司/组织名 -->
+    <artifactId>BOM_Demo</artifactId> <!--项目名-->
+    <version>1.0-fairyCat-SNAPSHOT</version><!--版本号 SNAPSHOT表示随时可能会变的快照版本-->
+
+    <packaging>jar</packaging> <!-- 打包的时候打jar包后面就可以用java -jar命令直接跑起来喵~ -->
+
+<!--parent标签作用: 继承"父项目"的配置，避免重复写。-->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.7.0</version>
+        <relativePath/> <!--没写值代表会去远程仓库中下载-->
+    </parent>
+
+<!--
+        定义一些属性变量
+        如果是第三方的依赖就必须得指定版本 父项目中是没有这些工具的 不指定就会报错的
+        像组织是org.springframework.boot就是父项目中有的依赖
+-->
+    <properties>
+        <java.version>8</java.version>
+        <mybatis-plus-version>3.5.5</mybatis-plus-version>
+        <mysql.version>8.0.33</mysql.version>
+    </properties>
+
+<!-- 引用一些相关的依赖包进来  或者说引入一些其它的项目进来复用。-->
+<!--    这里不需要指定对应的版本 应为已经继承了父项目中的版本号了-->
+    <dependencies>
+
+<!--        写接口的注解、返回JSON的注解、所要用到的web场景启动器-->
+<!--        这里需要注意返回对象的时候要想被@RestController注解转成JSON 需要对象有getXXX方法-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+<!--        参数校验的场景启动器-->
+<!--        里面的一些注解可以代替人为的if判断校验 比如常用的就是@NotBlank 不为NULL或空字符串-->
+<!--        配合在实体类上的注解与接收对象前的注解@Valid来实现参数校验-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+
+<!--        这个包主要提供@Data注解  通过它可以自动生成对应的get/set方法、并重写toString、hashCode、equals等方法-->
+<!--        这里面还有个好玩的注解： @Builder 可以达到建造者的效果 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional> <!--其它成员引用本项目时候不会自动导入当前的这个lombok包 防止依赖污染 -->
+        </dependency>
+
+<!--        引用绑定表与实体类的一些注解 比如 @TableId @TableName @TableField这些-->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter</artifactId>
+            <version>${mybatis-plus-version}</version>
+        </dependency>
+
+<!--
+        引入连接mysql数据库的依赖  之后直接去配置文件中配置连接信息就可以使用了
+        如果只引用了连接依赖包 但没有配置数据源信息就会报错
+-->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>${mysql.version}</version>
+            <scope>runtime</scope> <!--项目跑起来的时候需要这个包 在写代码的时候不需要-->
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+
+<!--            Maven的打包插件，将当前项目、相关依赖、内置的Tomcat全都打成一个可以直接用java -jar命令运行的jar包
+                这个插件好像没有2.7.10版本 下载依赖的时候报错了
+-->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+<!--                <configuration> 标签告诉Maven插件要按照我设置的规则来-->
+                <configuration>
+                    <excludes>
+<!--                        lombok的相关依赖包不需要打进jar包里 因为在编译的时候它的相关注解已经完成了它的使命-->
+<!--                        后面就不再需要lombok中的相关注解了 所以可以不打进jar包里以节省空间-->
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

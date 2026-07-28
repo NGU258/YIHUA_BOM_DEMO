@@ -1,0 +1,18 @@
+server:
+  port: 8066
+
+#自定义控制台日志格式输出以及字体颜色
+logging:
+  pattern:
+    console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){cyan} %clr(%-5p){green} %clr(${PID:- }){magenta} --- [%10.10t] %clr(%logger{36}){pink} : %msg%n"
+
+#数据库连接信息
+#useUnicode=true	使用Unicode编码 防止中文乱码
+#characterEncoding=utf8 指定字符编码是utf8 防止读写的时候出现中文乱码
+#useSSL=false  避免证书报错
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/bom_coding_handler?useUnicode=true&characterEncoding=utf8&&useSSL=false
+    username: root
+    password: lyq20041230
+    driver-class-name: com.mysql.cj.jdbc.Driver
