@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @TableName("bom_item")
 @Data
@@ -74,4 +76,12 @@ public class BomItem {
     @TableLogic
     private Boolean deleted;
 
+    //Mybatis-Plus默认行为： 会把实体类中的每个字段都映射到数据库字段中
+    //也就是说下面这个字段如果不指定exists=false告诉Mybatis-Plus数据库中不存在这个字段的话(不用管它)
+    //Mybatis-Plus生成的Sql中会出现这个字段： select ……,child_node from XXX 这样的话就会报错 因为数据库中是没有这个字段的
+    //这里赋值一个空列表 防止后面链式调用的时候出现空指针异常 属于一种防御性编程 是一种比较好的编程习惯
+    //这样的话前端那里看到的就是空列表[] 而不是null了
+    //由于 java7引入的 "类型自动推断机制" 后面<>里面可以不指定类型 它会根据左边的(List<BomItem>)自动推断出右边的类型的
+    @TableField(exist = false)
+    private List<BomItem> childNode = new ArrayList<BomItem>();
 }
