@@ -78,6 +78,13 @@
             <scope>runtime</scope> <!--项目跑起来的时候需要这个包 在写代码的时候不需要-->
         </dependency>
 
+<!--        引入测试工具的场景启动器 后面可以使用相关的注解 比如@SpringBootTest 跟@Test来进行单元测试-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope> <!-- 只需要在测试的时候用 在编译跟打包的时候不用 -->
+        </dependency>
+
     </dependencies>
 
     <build>

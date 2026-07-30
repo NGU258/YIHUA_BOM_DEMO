@@ -16,3 +16,4 @@ spring:
     username: root
     password: lyq20041230
     driver-class-name: com.mysql.cj.jdbc.Driver
+

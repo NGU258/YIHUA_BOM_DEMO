@@ -4,6 +4,9 @@ import com.baomidou.mybatisplus.annotation.*;
 import lombok.Builder;
 import lombok.Data;
 
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
+
 @Data //实现get/set方法 重写toString hashCode equals等方法
 @Builder //使用建造者模式！
 @TableName("material")
@@ -24,12 +27,14 @@ public class Material {
     private String materialType;
 
     @TableField("spec")
+    @Min(value = 1,message = "spec必须大于0喵~")
     private String spec;
 
     @TableField("unit")
     private String unit;
 
     @TableField("enabled")
+    @NotBlank(message ="enabled不能为空喵~")
     private String enabled;
 
     @TableField("create_time")
