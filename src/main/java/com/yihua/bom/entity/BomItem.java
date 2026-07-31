@@ -11,6 +11,10 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+
+// 投料方式是正常投料： 在生产产品前拿工单去仓库里面领
+// 投料方式是倒冲 这个是系统自动识别 然后扣减
+// 投料方式是手工投料 是由人工手动计算的
 @TableName("bom_item")
 @Data
 @Builder
@@ -43,7 +47,7 @@ public class BomItem {
     private Integer itemNo;
 
     @TableField("qty")
-    private Integer qty;
+    private BigDecimal qty;
 
     @TableField("unit")
     private String unit;
@@ -52,7 +56,7 @@ public class BomItem {
     private BigDecimal lossRate;
 
     @TableField("fixed_loss_qty")
-    private Integer fixedLossQty;
+    private BigDecimal fixedLossQty;
 
     @TableField("issue_type")
     private String issueType;
@@ -77,7 +81,7 @@ public class BomItem {
     private Boolean deleted;
 
     //Mybatis-Plus默认行为： 会把实体类中的每个字段都映射到数据库字段中
-    //也就是说下面这个字段如果不指定exists=false告诉Mybatis-Plus数据库中不存在这个字段的话(不用管它)
+    //也就是说下面这个字段如果不指定exists=fa lse告诉Mybatis-Plus数据库中不存在这个字段的话(不用管它)
     //Mybatis-Plus生成的Sql中会出现这个字段： select ……,child_node from XXX 这样的话就会报错 因为数据库中是没有这个字段的
     //这里赋值一个空列表 防止后面链式调用的时候出现空指针异常 属于一种防御性编程 是一种比较好的编程习惯
     //这样的话前端那里看到的就是空列表[] 而不是null了

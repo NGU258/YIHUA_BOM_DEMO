@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @TableName("bom_header")
@@ -39,7 +40,7 @@ public class BomHeader {
     private String bomType;
 
     @TableField("base_qty")
-    private Integer baseQty;
+    private BigDecimal baseQty;//这里为了方便后面直接调用方法进行计算  不需要再进行转换(Integer -> BigDecimal)
 
     @TableField("unit")
     private String unit;
@@ -48,7 +49,7 @@ public class BomHeader {
     private String status;
 
     @TableField("is_default")
-    private Boolean isDefault;
+    private Integer isDefault;
 
     @TableField("effective_date")
     private LocalDateTime effectiveDate;

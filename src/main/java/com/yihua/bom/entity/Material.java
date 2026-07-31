@@ -27,14 +27,12 @@ public class Material {
     private String materialType;
 
     @TableField("spec")
-    @Min(value = 1,message = "spec必须大于0喵~")
     private String spec;
 
     @TableField("unit")
     private String unit;
 
     @TableField("enabled")
-    @NotBlank(message ="enabled不能为空喵~")
     private String enabled;
 
     //这里注意不能使用exists = false
