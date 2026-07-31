@@ -1,6 +1,7 @@
 package com.yihua.bom.exception;
 
 import com.yihua.bom.vo.Result;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -37,9 +38,42 @@ public class GlobalExceptionHandler {
         return Result.fail(e.getCode(),e.getMessage());
     }
 
+    //捕获唯一索引抛出的异常
+    @ExceptionHandler(DuplicateKeyException.class)
+    public Result<Void> duplicateKeyExceptionHandler(DuplicateKeyException e){
+
+
+        //保存错误信息的异常父类可以通过getCasue方法获取到
+        //然后再调用getMessage方法来获取里面具体的错误信息
+        //下面的errorMessage打印的就是： Duplicate entry 'BOM-A-001' for key 'material.uk_material_code'
+        //这里的material.uk_material_code 就是对应的字段的索引名
+        //我只需要用正则表达式来获取.后面的名称
+        //然后再使用substring方法来获取uk_后面的字段名 就可以达到预料的效果了
+        String errorMessage = e.getCause().getMessage();
+
+        System.out.println(errorMessage);
+
+//        // 拿到最底层的异常信息
+//        String message = e.getCause().getMessage();
+//
+//        // 用正则提取 "for key 'xxx'" 中的 xxx
+//        String keyName = "未知";
+//        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("for key '(.+?)'").matcher(message);
+//        if (matcher.find()) {
+//            keyName = matcher.group(1);  // 例如 "material.uk_material_code"
+//
+//            // 如果有表名前缀（如 material.），去掉它
+//            if (keyName.contains(".")) {
+//                keyName = keyName.substring(keyName.lastIndexOf(".") + 1);
+//            }
+//        }
+        return Result.fail("有一列的值在数据库中已经存在了");
+    }
+
     //捕获所有未被处理的异常
     @ExceptionHandler(Exception.class)
     public Result<Void> otherExceptionhandler(Exception e){
+        e.printStackTrace();
         return Result.fail("500","服务器内部错误(请看后端控制台输出):"+e.getMessage());
     }
 

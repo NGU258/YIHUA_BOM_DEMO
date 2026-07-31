@@ -36,8 +36,10 @@
 <!--    这里不需要指定对应的版本 应为已经继承了父项目中的版本号了-->
     <dependencies>
 
-<!--        写接口的注解、返回JSON的注解、所要用到的web场景启动器-->
-<!--        这里需要注意返回对象的时候要想被@RestController注解转成JSON 需要对象有getXXX方法-->
+<!--        写接口的注解、返回JSON的注解、所要用到的web场景启动器 -->
+<!--        这里需要注意返回对象的时候要想被@RestController注解转成JSON 需要对象有getXXX方法 -->
+        <!-- 这里有一个好用的工具： org.springframework.beans.BeanUtils  -->
+        <!-- 里面有一个方法： copyProperties(A,B) 可以把A中同名的属性赋值给B中同名的属性  -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
