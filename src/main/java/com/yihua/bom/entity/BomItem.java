@@ -66,10 +66,10 @@ public class BomItem {
     @TableField("remark")
     private String remark;
 
-    @TableField("create_time")
+    @TableField(value = "create_time" , fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    @TableField("udpate_time")
+    @TableField(value = "udpate_time", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
     @TableField("deleted")

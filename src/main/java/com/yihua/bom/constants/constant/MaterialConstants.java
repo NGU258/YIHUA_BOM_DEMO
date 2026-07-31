@@ -1,4 +1,4 @@
-package com.yihua.bom.constant;
+package com.yihua.bom.constants.constant;
 
 /**
  * 这个类专门收集物料相关的常量值

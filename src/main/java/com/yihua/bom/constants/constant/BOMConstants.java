@@ -1,4 +1,4 @@
-package com.yihua.bom.constant;
+package com.yihua.bom.constants.constant;
 
 /**
  * 这个类主要是存放关于BOM的一些常量值

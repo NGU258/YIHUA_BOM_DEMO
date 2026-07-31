@@ -59,10 +59,12 @@ public class BomHeader {
     @TableField("remark")
     private String remark;
 
-    @TableField("create_time")
+    //告诉Mybatis-Plus这个字段后面在执行插入的时候要进行自动填充
+    //这里的话会被那个实现了MetaObjectHandler类的子类方法捕获到
+    @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    @TableField("update_time")
+    @TableField(value = "update_time" , fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
     @TableField("deleted")

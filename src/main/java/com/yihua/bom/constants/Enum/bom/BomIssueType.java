@@ -1,4 +1,4 @@
-package com.yihua.bom.Enum.bom;
+package com.yihua.bom.constants.Enum.bom;
 
 import lombok.Getter;
 

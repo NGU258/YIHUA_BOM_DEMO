@@ -37,10 +37,16 @@ public class Material {
     @NotBlank(message ="enabled不能为空喵~")
     private String enabled;
 
-    @TableField("create_time")
+    //这里注意不能使用exists = false
+    //不然的话进行查询的时候查询列里面就不会出现这列 这样的话就导致接收的java对象中会没有这一属性的值
+    //虽然数据库中是有值的 但这样操作的话就读取不到对应数据库中的值了
+    //最佳实践应该是 通过fill = FillField.insert 来告诉Mybatis-Plus这里需要进行自动填充 但这里只是一个标记
+    //然后再通过实现了MetaObjectHandler接口的子类里面的方法来执行自动填充逻辑
+
+    @TableField(value = "create_time", fill = FieldFill.INSERT)
     private String createTime;
 
-    @TableField("update_time")
+    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private String updateTime;
 
     @TableField("deleted")
