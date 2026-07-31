@@ -41,15 +41,6 @@ public class Result<cat> {
         this.timestamp = timestampFormat(System.currentTimeMillis()); //不指定的话就是null
     }
 
-    //响应成功信息  只需要传data
-    public static<cat> Result<cat> success(cat data){
-        return (Result <cat>) Result.builder()
-                .code("200") //成功的话状态码肯定都是200
-                .message("响应成功") //这个是比较偷懒的写法 就不需要自己指定成功信息了
-                .data(data)
-                .build();
-    }
-
     //响应成功信息 这个是比较灵活的写法 可以自己指定传啥 message
     public static<cat> Result<cat> success(String message, cat data){
         return (Result<cat>)Result.builder()
@@ -59,13 +50,10 @@ public class Result<cat> {
                 .build();
     }
 
-    //响应失败信息 偷懒的写法 默认客户端的问题用400来表示、服务端的问题都用500来表示
-    //常识： 响应失败就不需要返回数据了
-    public static<cat> Result<cat> fail(String message){
-        return (Result<cat>)Result.builder()
-                .code("400") //服务端的问题500就在全局异常处理那个位置捕获进行处理
-                .message(message)
-                .build();
+    //响应成功信息  只需要传data
+    public static<cat> Result<cat> success(cat data){
+        //这里进行了相关的优化 直接调用前面写好的方法就可以了
+        return success("响应成功",data);
     }
 
     //响应失败信息 比较灵活的写法
@@ -74,6 +62,14 @@ public class Result<cat> {
                 .code(code)
                 .message(message)
                 .build();
+    }
+
+    //响应失败信息 偷懒的写法 默认客户端的问题用400来表示、服务端的问题都用500来表示
+    //常识： 响应失败就不需要返回数据了
+    public static<cat> Result<cat> fail(String message){
+
+        //服务端的问题500就在全局异常处理那个位置捕获进行处理
+        return fail("500",message);
     }
 
 }

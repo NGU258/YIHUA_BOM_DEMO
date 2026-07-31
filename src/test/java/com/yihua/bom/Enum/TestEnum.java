@@ -1,7 +1,7 @@
 package com.yihua.bom.Enum;
 
 import com.yihua.bom.constants.Enum.bom.BomType;
-import com.yihua.bom.Enum.material.MaterialType;
+import com.yihua.bom.constants.Enum.material.MaterialType;
 import com.yihua.bom.constants.constant.BOMConstants;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
