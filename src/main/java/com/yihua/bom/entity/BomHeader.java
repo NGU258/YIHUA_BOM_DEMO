@@ -1,6 +1,7 @@
 package com.yihua.bom.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.yihua.bom.constants.Enum.bom.BomStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,7 +17,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class BomHeader {
     @TableId(type = IdType.AUTO)
-    private Integer id;
+    private Long id;
 
     @TableField("bom_code")
     private String bomCode;
@@ -25,7 +26,7 @@ public class BomHeader {
     private String bomName;
 
     @TableField("product_id")
-    private Integer productId;
+    private Long productId;
 
     @TableField("product_code")
     private String productCode;
@@ -46,7 +47,7 @@ public class BomHeader {
     private String unit;
 
     @TableField("status")
-    private String status;
+    private String status = BomStatus.DRAFT.getValue();
 
     @TableField("is_default")
     private Integer isDefault;

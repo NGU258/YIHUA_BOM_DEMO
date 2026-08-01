@@ -88,5 +88,4 @@ public class MaterialController {
          return Result.success("删除成功",material);
     }
 
-
 }

@@ -73,7 +73,8 @@ public class BomItem {
     @TableField(value = "create_time" , fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    @TableField(value = "udpate_time", fill = FieldFill.INSERT_UPDATE)
+    //这里好像会把value里面的字段名当成Mybaits-Plus生成SQL时的查询字段
+    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
     @TableField("deleted")

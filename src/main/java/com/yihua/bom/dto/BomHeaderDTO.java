@@ -1,15 +1,21 @@
 package com.yihua.bom.dto;
 
 
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 import com.yihua.bom.constants.Enum.bom.BomStatus;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class BomHeaderDTO {
 
     private String bomCode;
@@ -31,6 +37,9 @@ public class BomHeaderDTO {
     private String unit;
 
     //前端不写的话默认就是草稿状态
+    //@Builder.Default注解的作用就是会保留当前设置的默认值
+    //这样就不会因为JSON反序列化时因为全参构造中的赋值逻辑 给它重新赋值为null了
+    @Builder.Default
     private String status = BomStatus.DRAFT.getValue();
 
     //这里的话因为是一个包装类 不写的话默认值就是null  所以需要给它传一个 0 防止空指针异常

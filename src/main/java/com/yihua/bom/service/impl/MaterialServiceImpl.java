@@ -13,6 +13,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.Objects;
@@ -28,7 +29,16 @@ import java.util.Objects;
 public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> implements IMaterialService {
 
     private final MaterialMapper materialMapper;
+
+    // 事务的话就是要么都成功 要么都失败 比如我发红包100给张三 我的余额扣了100  但张三的余额如果没被加100是不被允许的 这个就是事务
+    // 所以@Transactional 这个注解的作用就是保证事务的一致性 如果发生了错误会及时回滚 让数据回到操作之前的状态
+    // 换一种说法就是 它会告诉spring当前这个方法对数据库的所有操作都要放在同一个事务里面
+    // 最佳实践： 写操作都需要用加这个@Transactional注解来保证事务的一致性
+    // 但读操作就不需要了 因为读的话只要不是并发场景 读到的数据都是一样的 这样还可以减少性能开销
+    // 这里不指定事务注解里面的rollbackFor属性的话默认是只回滚运行时异常和错误  但非运行时异常是不会被回滚的
+    // 如果想在触发非运行时异常就回滚的话需要指定 rollbackFor = Exception.class
     @Override
+    @Transactional
     public Material createMaterial(MaterialDTO m) {
 
         Material material = new Material();
@@ -86,6 +96,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
     }
 
     @Override
+    @Transactional
     public Material updateMaterial(Long materialId, MaterialDTO mDto) {
          Material material = getById(materialId);
          if(Objects.isNull(material))
@@ -98,6 +109,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
     }
 
     @Override
+    @Transactional
     public Material deleteMaterialById(Long materialId) {
         //逻辑： 返回的时候给用户显示已删除的那个物料信息
         Material material = getById(materialId);
