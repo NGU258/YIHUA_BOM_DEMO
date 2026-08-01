@@ -70,6 +70,6 @@ public class BomHeader {
 
     @TableField("deleted")
     @TableLogic
-    private Boolean deleted;
+    private Integer deleted = 0;
 
 }

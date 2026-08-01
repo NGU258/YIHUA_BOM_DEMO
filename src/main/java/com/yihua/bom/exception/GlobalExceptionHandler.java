@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 //Rest代表@RestController，方法的返回值会自动转换成JSON
@@ -42,32 +44,32 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DuplicateKeyException.class)
     public Result<Void> duplicateKeyExceptionHandler(DuplicateKeyException e){
 
-
         //保存错误信息的异常父类可以通过getCasue方法获取到
         //然后再调用getMessage方法来获取里面具体的错误信息
         //下面的errorMessage打印的就是： Duplicate entry 'BOM-A-001' for key 'material.uk_material_code'
-        //这里的material.uk_material_code 就是对应的字段的索引名
+        //这里的material.uk_material_code 就是对应字段的索引名
         //我只需要用正则表达式来获取.后面的名称
         //然后再使用substring方法来获取uk_后面的字段名 就可以达到预料的效果了
         String errorMessage = e.getCause().getMessage();
 
         System.out.println(errorMessage);
 
-//        // 拿到最底层的异常信息
-//        String message = e.getCause().getMessage();
-//
-//        // 用正则提取 "for key 'xxx'" 中的 xxx
-//        String keyName = "未知";
-//        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("for key '(.+?)'").matcher(message);
-//        if (matcher.find()) {
-//            keyName = matcher.group(1);  // 例如 "material.uk_material_code"
-//
-//            // 如果有表名前缀（如 material.），去掉它
-//            if (keyName.contains(".")) {
-//                keyName = keyName.substring(keyName.lastIndexOf(".") + 1);
-//            }
-//        }
-        return Result.fail("有一列的值在数据库中已经存在了");
+        //又复习了下正则表达式知识点 发现可以直接用捕获组来直接捕获 就不需要调用substring方法了
+        //使用正则表达式来获取里面的字段值
+        //这里的.+?采用的非贪婪模式
+        Matcher matcher1 = Pattern.compile(".uk_(.+?)'").matcher(errorMessage);
+        Matcher matcher2 = Pattern.compile(".*?'(.+?)'").matcher(errorMessage);
+
+        String fieldName = "";
+        String fieldValue = "";
+        //这里需要先调用find方法来实际执行匹配的这个动作
+        if(matcher1.find())
+             fieldName = matcher1.group(1);
+
+        if(matcher2.find())
+            fieldValue = matcher2.group(1);
+
+        return Result.fail("字段【"+fieldName+"】对应的值【"+fieldValue+"】在数据库中已有重复，请重新赋值。");
     }
 
     //捕获所有未被处理的异常

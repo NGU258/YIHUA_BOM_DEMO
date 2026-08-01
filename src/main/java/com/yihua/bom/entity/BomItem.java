@@ -78,7 +78,7 @@ public class BomItem {
 
     @TableField("deleted")
     @TableLogic
-    private Boolean deleted;
+    private Integer deleted = 0;
 
     //Mybatis-Plus默认行为： 会把实体类中的每个字段都映射到数据库字段中
     //也就是说下面这个字段如果不指定exists=fa lse告诉Mybatis-Plus数据库中不存在这个字段的话(不用管它)

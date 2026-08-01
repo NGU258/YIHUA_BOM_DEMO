@@ -43,4 +43,5 @@ public class BomItemDTO {
 
     private String remark;
 
+    private Integer deleted;
 }

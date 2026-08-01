@@ -54,5 +54,6 @@ public class Material {
 
     @TableField("deleted")
     @TableLogic //告诉Mybatis-plus这个是逻辑删除字段 后面的删除逻辑会变成把deleted字段值更新成1
-    private String deleted;
+    //由于数据库默认值不会进行回填 所以返回给前端的时候这里的值就是null
+    private Integer deleted ;
 }

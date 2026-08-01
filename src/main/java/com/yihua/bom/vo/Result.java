@@ -19,7 +19,7 @@ public class Result<cat> {
     //响应数据（具体的值）
     private cat data;
 
-    //记载响应的时间戳
+    //请求接口后的响应时间 记载响应的时间戳
     private String timestamp;
 
     //    将时间戳(直接返回的毫秒值)转成可观的日期格式
