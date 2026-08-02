@@ -10,4 +10,8 @@ public interface IBomItemService extends IService<BomItem> {
     List<BomItem> getDetailsById(Long bomId);
 
     BomItem createBomItem(Long bomId, BomItemDTO b);
+
+    BomItem updateBomItemByBomIdAndBomItemId(Long bomId, Long bomItemId, BomItemDTO b);
+
+    BomItem deleteBomItemByBomItemId(Long bomId,Long bomItemId);
 }

@@ -19,7 +19,7 @@ public class Material {
 
     //value告诉Mybatis-plus这个字段在数据库里的名字叫啥 AUTO表示主键自增 默认是NONE
     @TableId(value = "id" , type = IdType.AUTO)
-    private String id;
+    private Long id;
 
     //value这个属性比较特殊 如果只有一个value需要赋值的话value可以省略不写
     @TableField("material_code")
@@ -54,6 +54,7 @@ public class Material {
 
     @TableField("deleted")
     @TableLogic //告诉Mybatis-plus这个是逻辑删除字段 后面的删除逻辑会变成把deleted字段值更新成1
-    //由于数据库默认值不会进行回填 所以返回给前端的时候这里的值就是null
-    private Integer deleted ;
+    //由于数据库默认值不会进行回填 所以返回给前端的时候这里的显示的就是null 所以还是需要给个默认值0
+    @Builder.Default
+    private Integer deleted =0 ;
 }

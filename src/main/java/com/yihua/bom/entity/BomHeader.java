@@ -46,8 +46,9 @@ public class BomHeader {
     @TableField("unit")
     private String unit;
 
+
     @TableField("status")
-    private String status = BomStatus.DRAFT.getValue();
+    private String status;
 
     @TableField("is_default")
     private Integer isDefault;
@@ -71,6 +72,6 @@ public class BomHeader {
 
     @TableField("deleted")
     @TableLogic
-    private Integer deleted = 0;
+    private Integer deleted;
 
 }

@@ -23,7 +23,12 @@ import java.util.Objects;
 
 // @RequiredArsConstructor 注解生成的构造器所包含的字段：  只包含final字段跟@NonNUll字段
 // 这里的语义就比较明确  只有需要的依赖才放到构造器里面
+// @NonNull 注解是在lombok依赖中的
+// Non是拉丁语前缀 而Not是英语单词 虽然两者表现形式不一样 但它们两者都表达同一个意思 都是否定的意思
 // @NonNull 注解被用在方法形参跟字段上面 作用是这个值不能为null 如果是null的话就会抛出对应的异常
+// 比如在方法形参名a前面加了@NonNull 则lombok在编译时会在方法体中添加这个if判断 即if(a == null) 就throw出对应的异常
+// 它与NotNull的区别是 NotNull是Validation依赖下的校验注解  需要结合@Valid注解或@Validated注解才能生效
+// 如果方法接收的DTO对象前面没有加上@Valid或@Validated注解的话 前面设置的这些@NotNull校验注解就不会生效.
 @Service
 @RequiredArgsConstructor // 用来生成全参构造  主要针对于final字段
 public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> implements IMaterialService {

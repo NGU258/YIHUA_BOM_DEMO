@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.validation.constraints.DecimalMin;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -23,16 +24,16 @@ import java.util.List;
 public class BomItem {
 
     @TableId(type = IdType.AUTO)
-    private Integer id;
+    private Long id;
 
     @TableField("bom_id")
-    private Integer bomId;
+    private Long bomId;
 
     @TableField("parent_id")
-    private Integer parentId;
+    private Long parentId;
 
     @TableField("material_id")
-    private Integer materialId;
+    private Long materialId;
 
     @TableField("material_code")
     private String materialCode;
@@ -47,6 +48,9 @@ public class BomItem {
     private Integer itemNo;
 
     @TableField("qty")
+    //这个注解的value代表>=
+    //这里是用>=0.0001这个最小值来表示必须大于0的这个约束
+    @DecimalMin(value = "0.0001" , message = "标准用量(qty)必须大于0")
     private BigDecimal qty;
 
     @TableField("unit")
@@ -61,6 +65,7 @@ public class BomItem {
     @TableField("issue_type")
     private String issueType;
 
+    //工序编码代表当前这个物料在哪个工序(环节)中使用
     @TableField("process_code")
     private String processCode;
 
@@ -79,6 +84,7 @@ public class BomItem {
 
     @TableField("deleted")
     @TableLogic
+    @Builder.Default
     private Integer deleted = 0;
 
     //Mybatis-Plus默认行为： 会把实体类中的每个字段都映射到数据库字段中
@@ -88,5 +94,6 @@ public class BomItem {
     //这样的话前端那里看到的就是空列表[] 而不是null了
     //由于 java7引入的 "类型自动推断机制" 后面<>里面可以不指定类型 它会根据左边的(List<BomItem>)自动推断出右边的类型的
     @TableField(exist = false)
+    @Builder.Default
     private List<BomItem> childNode = new ArrayList<BomItem>();
 }

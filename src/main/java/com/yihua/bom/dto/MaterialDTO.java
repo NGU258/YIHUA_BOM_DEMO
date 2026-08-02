@@ -20,5 +20,4 @@ public class MaterialDTO {
     //默认启用吧
     private Integer enalbed = 1;
 
-    private Integer deleted ;
 }

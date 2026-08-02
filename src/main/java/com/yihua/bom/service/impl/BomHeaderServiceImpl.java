@@ -134,7 +134,6 @@ public class BomHeaderServiceImpl extends ServiceImpl<BomHeaderMapper, BomHeader
         if(Objects.isNull(bomItem))
             return map;
 
-
         Boolean itemResult  = iBomItemService.remove(lqw);
         if(!itemResult)
             throw new fairyCatException("500","批量删除BOM明细失败");
@@ -149,6 +148,8 @@ public class BomHeaderServiceImpl extends ServiceImpl<BomHeaderMapper, BomHeader
         if(Objects.isNull(bomHeader))
             throw new fairyCatException("500","在启用BOM时发现要找的BOM在数据库中并没有记录");
         bomHeader.setStatus(BomStatus.ACTIVE.getValue());
+        //这是的逻辑就是如果它是启用状态 则代表它是一个默认版本 用1来标识
+        bomHeader.setIsDefault(1);
 
         Boolean result = updateById(bomHeader);
         if(!result)
@@ -172,6 +173,7 @@ public class BomHeaderServiceImpl extends ServiceImpl<BomHeaderMapper, BomHeader
         BomHeaderVo bomHeaderVo = new BomHeaderVo();
 
         bomHeader.setStatus(BomStatus.DISABLED.getValue());
+        bomHeader.setIsDefault(0);
 
         Boolean result = updateById(bomHeader);
         if(!result)

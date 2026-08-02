@@ -28,7 +28,7 @@ public class GlobalExceptionHandler {
         String errorMessage = e.getBindingResult() //获取存储异常信息的结果对象
                 .getFieldErrors() //拿出该对象中的所有错误字段
                 .stream() //转成流(流水线 一个螺丝一个螺丝的送)
-                .map(FieldError::getDefaultMessage) //获取所有错误字段对应的错误信息  这里就对应着校验注解对应的value值了
+                .map(FieldError::getDefaultMessage) //获取所有错误字段对应的错误信息  这里就对应着校验注解对应的message属性值了
                 .collect(Collectors.joining(";"));//收集起来 然后用分号分隔
 
         return Result.fail(errorMessage);

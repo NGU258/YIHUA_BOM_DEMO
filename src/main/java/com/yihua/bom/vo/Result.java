@@ -1,13 +1,15 @@
 package com.yihua.bom.vo;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 @Builder
-@Data //解决因为没有get方法导致的序列化失败问题  （如果有手写的构造器lombok会跳过 不会生成后重新覆盖）
+@Data //解决因为没有get方法导致的序列化(对象转JSON)失败问题  （如果有手写的构造器lombok会跳过 不会生成后重新覆盖）
 public class Result<cat> {
 
     //状态码

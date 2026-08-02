@@ -40,7 +40,7 @@ public class BomHeaderController {
     //还需要查询这个记录对应的BOM子表中的记录
     //所以这里的设计思路就是使用Map来实现 key用来存储对应的字段 value就是对应的表中的明细
     @GetMapping("/{bomId}")
-    public Result<Map<String, Object>> getBomHeaderById(@PathVariable Long bomId){
+    public Result<Map<String, Object>> getBomHeaderAnItemsById(@PathVariable Long bomId){
             Map<String,Object> result = iBomHeaderService.getBomHeaderAndItemsByBomId(bomId);
             return Result.success("查询成功",result);
     }
