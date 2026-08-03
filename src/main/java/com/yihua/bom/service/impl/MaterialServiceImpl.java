@@ -43,6 +43,14 @@ import java.util.Objects;
 //这个@RequiredArgsConstructor有一个坑在里面
 //如果下面的private final字段上面加了@Lazy注解的话 @RequriedArgsConstructor注解生成的构造器里面形参前面是不会自动加上这个@Lazy注解的
 //所以如果需要解决循环依赖的话得自己手写一个全参构造才会生效
+
+//因为在建数据库的时候使用的排序规则是utf8mb4_general_ci 后面的ci（case insensitive 翻译过来就是对实例不在意）就是不区分大小写的意思
+//所以如果用条件构造器的eq来判断的时候 比如比较字符串ACTIVE,不管数据库中的值是acTIVE还是active 都是可以匹配到的
+//面如果在建数据库的时候使用的排序规则是utf8mb4_general_cs（case sensitive 对实例敏感的）则就是区分大小写的意思
+//此时如果判断的字符串是ACTIVE,而数据库里面存的是非全大写ACTIVE的话就会查找失败
+//解决方案就是用apply方法拼接一个自定义sql 然后用upper将数据库字段status对应的值转成全大写 然后再与当前比较的大写ACTIVE比较就都能匹配到了
+//使用{索引}占位符 索引从0开始 {0}代表第一个参数 {1}代表第二个参数 ，以此类推
+//示例:  lqw.apply("upper(status) = {0}",BomStatus.ACTIVE.getValue());
 @Service
 //@RequiredArgsConstructor // 用来生成全参构造  主要针对于final字段
 public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> implements IMaterialService {
@@ -157,12 +165,13 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
 
         LambdaQueryWrapper<BomHeader> lqw_header = new LambdaQueryWrapper<>();
         lqw_header.eq(BomHeader::getProductId,materialId)
-                .eq(BomHeader::getStatus, BomStatus.ACTIVE.getValue());
+
+                .eq(BomHeader::getStatus,BomStatus.ACTIVE.getValue());
 
         //先找这个物料对应的启用Bom-Header记录
         BomHeader bomHeader =iBomHeaderService.getOne(lqw_header);
         if(Objects.isNull(bomHeader))
-            throw new fairyCatException("500","该物料在数据库中查不到有BOM启用了");
+            throw new fairyCatException("500","该物料不存在或它在数据库中没有对应启用的BOM");
 
         //这里存的就是根节点的值
         BomTreeStructVo bomTreeStructVo = BomTreeStructVo.builder()
@@ -173,7 +182,6 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
                 .materialName(bomHeader.getProductName())
                 .build();
 
-
         //这里就是存的所有子节点的值
         List<BomTreeStructVo> bomTreeStructVoList = new ArrayList<>();
 
@@ -181,6 +189,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
         //这里测试后发现需要分情况 一种情况是成品(根节点) 这里可以用bomId跟ParentId去找
         //但如果是半成品(父物料节点) 就不能用bomId跟ParentId去找了 因为BomId是记录着成品物料的id  并不是半成品物料的id 直接调用findXXX传bomItem的id就可以了
         LambdaQueryWrapper<BomItem> lqw_item = new LambdaQueryWrapper<>();
+        //来到这里说明肯定能查到一个物料记录 所以可以不用判断了
         Material material = getById(materialId);
         //这里测试的时候发现不区分大小写 传product跟PRODUCT都可以
         if(MaterialType.PRODUCT.getValue().equalsIgnoreCase(material.getMaterialType())){
@@ -193,11 +202,14 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
             for(BomItem cur: twoNode)
                 bomTreeStructVoList.add(findBomTreeStructByBomItemId(bomHeader.getId(),cur.getId()));
         }else{
-            //半成品或原材料的情况  老师说没有这种情况 只需要传成品的就可以了
-//            lqw_item.eq(BomItem::getBomId,bomHeader.getId())
-//                    .eq(BomItem::getMaterialId,materialId);
-//            BomItem  bomItem = iBomItemService.getOne(lqw_item);
-//            bomTreeStructVoList.add(findBomTreeStructByBomItemId(bomHeader.getId(),bomItem.getId()));
+            //半成品或原材料的情况  老师说没有半成品这种情况 只需要传成品的就可以了
+            //郑经理说公司里面的成品或半成品一般都需要看它的BOM
+            //所以这里的设计就是这个半成品的BOM不管在哪颗树下 比如主板不管是在笔记本电脑上还是台式机电脑上 在查看主板BOM结构时默认都是一样的
+            lqw_item.eq(BomItem::getMaterialId,materialId);
+            BomItem  bomItem = iBomItemService.getOne(lqw_item);
+
+            //如果是半成品 直接返回它的BOM结构就可以了
+            return findBomTreeStructByBomItemId(bomItem.getBomId(),bomItem.getId());
         }
 
         bomTreeStructVo.setChildNode(bomTreeStructVoList);

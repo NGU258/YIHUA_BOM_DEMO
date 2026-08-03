@@ -19,11 +19,11 @@ public class BomTreeStructVo {
 
     private String unit;
 
-    private Long materialId;
+    private String materialName;
 
     private String materialCode;
 
-    private String materialName;
+    private Long materialId;
 
     @Builder.Default
     private List<BomTreeStructVo> childNode = new ArrayList<>();
