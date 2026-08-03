@@ -33,6 +33,8 @@ public class BomItemController {
         return Result.success("更新明细成功",bomItem);
     }
 
+    //这里的删除逻辑不只有一条记录
+    //还需要递归删除这个子节点下的所有子节点 所以需要写一个递归函数递归删除
     @DeleteMapping("/{bomItemId}")
     public Result<BomItem> deleteBomItemByBomItemId(@PathVariable Long bomId,
                                                     @PathVariable Long  bomItemId){
