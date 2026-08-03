@@ -10,9 +10,11 @@ import com.yihua.bom.exception.fairyCatException;
 import com.yihua.bom.service.IBomItemService;
 import com.yihua.bom.service.IMaterialService;
 import com.yihua.bom.util.BeanCopyUtils;
+import com.yihua.bom.vo.BomItemVo;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -98,7 +100,7 @@ public class BomItemServiceImpl extends ServiceImpl<BomItemMapper, BomItem> impl
     }
 
     @Override
-    public BomItem deleteBomItemByBomItemId(Long bomId, Long bomItemId) {
+    public BomItemVo deleteBomItemByBomItemId(Long bomId, Long bomItemId) {
 
         //删除之前保存一下 用于返回
         LambdaQueryWrapper<BomItem> lqw = new LambdaQueryWrapper<>();
@@ -106,10 +108,65 @@ public class BomItemServiceImpl extends ServiceImpl<BomItemMapper, BomItem> impl
                 .eq(BomItem::getId,bomItemId);
         BomItem bomItem = getOne(lqw);
 
-        boolean result = removeById(bomItemId);
-        if(!result)
-            throw new fairyCatException("500","删除明细失败,请联系管理员");
-        return bomItem;
+        if(Objects.isNull(bomItem))
+            throw new fairyCatException("500","该明细已经在数据库中被删掉了");
 
+        //删除指定Bom明细节点对应的树结构 只需要传它对应的bomItemId就可以了
+        BomItemVo bomItemVo= deleteBomItemTreeStructByBomItemId(bomItem.getId());
+
+        return bomItemVo;
+
+    }
+
+    @Override
+    public BomItemVo findBomItemTreeStructByBomItemId(Long bomItemId) {
+
+         BomItem  bomItem = getById(bomItemId);
+         if(Objects.isNull(bomItem))
+             throw new fairyCatException("500","数据库中未找到该BOM明细");
+
+         BomItemVo bomItemVo = new BomItemVo();
+         BeanUtils.copyProperties(bomItem,bomItemVo);
+
+         LambdaQueryWrapper<BomItem> lqw = new LambdaQueryWrapper<>();
+         lqw.eq(BomItem::getParentId,bomItemId);
+
+         List<BomItem> childNode = list(lqw);
+         for(BomItem cur : childNode){
+             //这里的话还是把单位与数量放前面显示一点会好点
+             List<BomItemVo> bomItemVoListVo = new ArrayList<>();
+             bomItemVoListVo.add(findBomItemTreeStructByBomItemId(cur.getId()));
+             bomItemVo.setChildNode(bomItemVoListVo);
+         }
+
+         return bomItemVo;
+    }
+
+    @Override
+    public BomItemVo deleteBomItemTreeStructByBomItemId(Long bomItemId) {
+
+        BomItem  bomItem = getById(bomItemId);
+        if(Objects.isNull(bomItem))
+            throw new fairyCatException("500","数据库中未找到该BOM明细");
+
+        BomItemVo bomItemVo = new BomItemVo();
+        BeanUtils.copyProperties(bomItem,bomItemVo);
+
+        LambdaQueryWrapper<BomItem> lqw = new LambdaQueryWrapper<>();
+        lqw.eq(BomItem::getParentId,bomItemId);
+
+        List<BomItem> childNode = list(lqw);
+        for(BomItem cur : childNode){
+            //这里的话还是把单位与数量放前面显示一点会好点
+            List<BomItemVo> bomItemVoListVo = new ArrayList<>();
+            bomItemVoListVo.add(deleteBomItemTreeStructByBomItemId(cur.getId()));
+            bomItemVo.setChildNode(bomItemVoListVo);
+        }
+
+        Boolean result = removeById(bomItemId);
+        if(!result)
+            throw new fairyCatException("500","递归删除明细失败");
+
+        return bomItemVo;
     }
 }
