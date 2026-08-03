@@ -16,6 +16,7 @@ import com.yihua.bom.service.IBomItemService;
 import com.yihua.bom.service.IMaterialService;
 import com.yihua.bom.vo.BomHeaderVo;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -26,6 +27,7 @@ import java.util.*;
 public class BomHeaderServiceImpl extends ServiceImpl<BomHeaderMapper, BomHeader> implements IBomHeaderService {
 
     private final IBomItemService iBomItemService;
+
     private final IMaterialService iMaterialService;
 
     public BomHeaderServiceImpl(IBomItemService ib,IMaterialService im){

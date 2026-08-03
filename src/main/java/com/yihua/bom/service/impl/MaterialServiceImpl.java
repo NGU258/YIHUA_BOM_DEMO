@@ -5,17 +5,27 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yihua.bom.Mapper.MaterialMapper;
+import com.yihua.bom.constants.Enum.bom.BomStatus;
+import com.yihua.bom.constants.Enum.material.MaterialType;
 import com.yihua.bom.dto.MaterialDTO;
+import com.yihua.bom.entity.BomHeader;
+import com.yihua.bom.entity.BomItem;
 import com.yihua.bom.entity.Material;
 import com.yihua.bom.exception.fairyCatException;
+import com.yihua.bom.service.IBomHeaderService;
+import com.yihua.bom.service.IBomItemService;
 import com.yihua.bom.service.IMaterialService;
+import com.yihua.bom.vo.BomTreeStructVo;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 // @AllArgsConstructor 注解生成的构造器所包含的字段 ： 所有final与非final字段
@@ -29,11 +39,24 @@ import java.util.Objects;
 // 比如在方法形参名a前面加了@NonNull 则lombok在编译时会在方法体中添加这个if判断 即if(a == null) 就throw出对应的异常
 // 它与NotNull的区别是 NotNull是Validation依赖下的校验注解  需要结合@Valid注解或@Validated注解才能生效
 // 如果方法接收的DTO对象前面没有加上@Valid或@Validated注解的话 前面设置的这些@NotNull校验注解就不会生效.
+
+//这个@RequiredArgsConstructor有一个坑在里面
+//如果下面的private final字段上面加了@Lazy注解的话 @RequriedArgsConstructor注解生成的构造器里面形参前面是不会自动加上这个@Lazy注解的
+//所以如果需要解决循环依赖的话得自己手写一个全参构造才会生效
 @Service
-@RequiredArgsConstructor // 用来生成全参构造  主要针对于final字段
+//@RequiredArgsConstructor // 用来生成全参构造  主要针对于final字段
 public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> implements IMaterialService {
 
     private final MaterialMapper materialMapper;
+    private final IBomHeaderService iBomHeaderService;
+    private final IBomItemService iBomItemService;
+
+    public MaterialServiceImpl(@Lazy MaterialMapper mm,@Lazy IBomHeaderService ib,@Lazy IBomItemService ibi){
+            materialMapper = mm ;
+            iBomHeaderService = ib ;
+            iBomItemService = ibi ;
+    }
+
 
     // 事务的话就是要么都成功 要么都失败 比如我发红包100给张三 我的余额扣了100  但张三的余额如果没被加100是不被允许的 这个就是事务
     // 所以@Transactional 这个注解的作用就是保证事务的一致性 如果发生了错误会及时回滚 让数据回到操作之前的状态
@@ -127,5 +150,89 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
                 throw new fairyCatException("500","删除失败");
 
         return material;
+    }
+
+    @Override
+    public BomTreeStructVo BomTreeStructByMaterialId(Long materialId) {
+
+        LambdaQueryWrapper<BomHeader> lqw_header = new LambdaQueryWrapper<>();
+        lqw_header.eq(BomHeader::getProductId,materialId)
+                .eq(BomHeader::getStatus, BomStatus.ACTIVE.getValue());
+
+        //先找这个物料对应的启用Bom-Header记录
+        BomHeader bomHeader =iBomHeaderService.getOne(lqw_header);
+        if(Objects.isNull(bomHeader))
+            throw new fairyCatException("500","该物料在数据库中查不到有BOM启用了");
+
+        //这里存的就是根节点的值
+        BomTreeStructVo bomTreeStructVo = BomTreeStructVo.builder()
+                .qty(bomHeader.getBaseQty())
+                .unit(bomHeader.getUnit())
+                .materialId(bomHeader.getProductId())
+                .materialCode(bomHeader.getProductCode())
+                .materialName(bomHeader.getProductName())
+                .build();
+
+
+        //这里就是存的所有子节点的值
+        List<BomTreeStructVo> bomTreeStructVoList = new ArrayList<>();
+
+        //接着拿着这条记录的bom_id去子表Bom-Item中找树中第二层的所有节点
+        //这里测试后发现需要分情况 一种情况是成品(根节点) 这里可以用bomId跟ParentId去找
+        //但如果是半成品(父物料节点) 就不能用bomId跟ParentId去找了 因为BomId是记录着成品物料的id  并不是半成品物料的id 直接调用findXXX传bomItem的id就可以了
+        LambdaQueryWrapper<BomItem> lqw_item = new LambdaQueryWrapper<>();
+        Material material = getById(materialId);
+        //这里测试的时候发现不区分大小写 传product跟PRODUCT都可以
+        if(MaterialType.PRODUCT.getValue().equalsIgnoreCase(material.getMaterialType())){
+            //如果是成品的情况
+            lqw_item.eq(BomItem::getBomId,bomHeader.getId())
+                    .eq(BomItem::getParentId,0);
+            List<BomItem> twoNode = iBomItemService.list(lqw_item);
+
+            //遍历第二层的所有节点 然后调用findXXX方法去查询到这些节点对应的BOM
+            for(BomItem cur: twoNode)
+                bomTreeStructVoList.add(findBomTreeStructByBomItemId(bomHeader.getId(),cur.getId()));
+        }else{
+            //半成品或原材料的情况  老师说没有这种情况 只需要传成品的就可以了
+//            lqw_item.eq(BomItem::getBomId,bomHeader.getId())
+//                    .eq(BomItem::getMaterialId,materialId);
+//            BomItem  bomItem = iBomItemService.getOne(lqw_item);
+//            bomTreeStructVoList.add(findBomTreeStructByBomItemId(bomHeader.getId(),bomItem.getId()));
+        }
+
+        bomTreeStructVo.setChildNode(bomTreeStructVoList);
+
+        return bomTreeStructVo;
+
+    }
+
+    @Override
+    public BomTreeStructVo findBomTreeStructByBomItemId(Long bomId,Long bomItemId) {
+
+        BomItem bomItem = iBomItemService.getById(bomItemId);
+        if(Objects.isNull(bomItem))
+            throw new fairyCatException("500","在递归查询BOM树时发现有个Bom明细id在数据库中不存在");
+
+        BomTreeStructVo bomTreeStructVo = BomTreeStructVo.builder()
+                .qty(bomItem.getQty())
+                .unit(bomItem.getUnit())
+                .materialId(bomItem.getMaterialId())
+                .materialCode(bomItem.getMaterialCode())
+                .materialName(bomItem.getMaterialName())
+                .build();
+
+        LambdaQueryWrapper<BomItem> lqw = new LambdaQueryWrapper<>();
+        lqw.eq(BomItem::getBomId,bomId)
+            .eq(BomItem::getParentId,bomItemId);
+
+        //然后再找当前节点的所有子节点
+        List<BomItem> childNode = iBomItemService.list(lqw);
+        for(BomItem cur: childNode){
+                List<BomTreeStructVo> bomTreeStructVoList = new ArrayList<>();
+                bomTreeStructVoList.add(findBomTreeStructByBomItemId(bomId,cur.getId()));
+                bomTreeStructVo.setChildNode(bomTreeStructVoList);
+        }
+
+        return bomTreeStructVo;
     }
 }
