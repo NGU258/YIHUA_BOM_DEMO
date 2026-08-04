@@ -199,10 +199,14 @@ public class BomHeaderServiceImpl extends ServiceImpl<BomHeaderMapper, BomHeader
             throw new fairyCatException("500","启用BOM失败，请联系管理员");
 
        return BomHeaderVo.builder()
-                .id(bomHeader.getId())
-                .bomName(bomHeader.getBomName())
-                .bomCode(bomHeader.getBomCode())
+                .materialId(bomHeader.getProductId())
+                .materialCode(bomHeader.getProductCode())
+                .materialName(bomHeader.getProductName())
                 .status(bomHeader.getStatus())
+                .isDefault(bomHeader.getIsDefault())
+                .bomCode(bomHeader.getBomCode())
+                .bomName(bomHeader.getBomName())
+                .id(bomHeader.getId())
                 .build();
     }
 
@@ -223,7 +227,31 @@ public class BomHeaderServiceImpl extends ServiceImpl<BomHeaderMapper, BomHeader
             throw new fairyCatException("500","停用BOM失败，请联系管理员");
 
         BeanUtils.copyProperties(bomHeader,bomHeaderVo);
+        bomHeaderVo.setMaterialCode(bomHeader.getProductCode());
+        bomHeaderVo.setMaterialName(bomHeader.getProductName());
+        bomHeaderVo.setMaterialId(bomHeader.getProductId());
 
         return bomHeaderVo;
+    }
+
+    @Override
+    public Long getBomHeaderIdByMaterialId(Long materialId) {
+        //这里需要拿一下物料在bomHeader中启用或草稿状态的BOMHeader对应的id 方便后面根据查树BOM响应结果中的id进行快速测试(启用与停用 就不需要自己老是去找了)
+        //如果没有启用版本则在设计上默认就拿草稿状态，而草稿状态只会有一个，启用状态也只会有一个 剩余的就是停用状态
+        LambdaQueryWrapper<BomHeader> lqw_h = new LambdaQueryWrapper<>();
+        lqw_h.eq(BomHeader::getProductId,materialId)
+                .eq(BomHeader::getStatus,BomStatus.ACTIVE.getValue());
+        BomHeader bomHeader_active = getOne(lqw_h);
+        Long bomHeaderId = bomHeader_active != null ? bomHeader_active.getId(): null; //默认先拿启用状态的
+        if(Objects.isNull(bomHeaderId)){
+            //启用状态没有默认就拿草稿状态的
+            lqw_h.clear();
+            lqw_h.eq(BomHeader::getProductId,materialId)
+                    .eq(BomHeader::getStatus,BomStatus.DRAFT.getValue());
+            BomHeader bomHeader_draft =getOne(lqw_h);
+            //如果还是null的话就说明这个物料是原材料  赋值为null就可以了 null就代表原材料的意思
+            bomHeaderId = bomHeader_draft != null ? bomHeader_draft.getId() : null;
+        }
+        return bomHeaderId;
     }
 }

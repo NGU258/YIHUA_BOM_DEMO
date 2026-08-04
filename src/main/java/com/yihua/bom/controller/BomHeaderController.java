@@ -60,7 +60,7 @@ public class BomHeaderController {
 
     }
 
-    @PutMapping("{bomId}/active")
+    @PutMapping("/{bomId}/active")
     public Result<BomHeaderVo> activeBomStatus(@PathVariable Long bomId){
             BomHeaderVo bhVo  = iBomHeaderService.activeBomStatus(bomId);
             return Result.success("启动成功",bhVo);

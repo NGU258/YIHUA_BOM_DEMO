@@ -194,8 +194,27 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
         lqw_header.eq(BomHeader::getProductId,materialId)
                 .eq(BomHeader::getStatus,BomStatus.ACTIVE.getValue());
         BomHeader bomHeader =iBomHeaderService.getOne(lqw_header);
-        if(Objects.isNull(bomHeader))
-            throw new fairyCatException("500","该物料不存在或它在数据库中没有对应启用的BOM");
+        if(Objects.isNull(bomHeader)){
+            //这里我需要展示一下成品根节点信息 所以需要对这个物料有没有bomHeader做一个判断
+            lqw_header.clear();
+            lqw_header.eq(BomHeader::getProductId,materialId);
+            List<BomHeader> bomHeaderList = iBomHeaderService.list(lqw_header);
+            if(Objects.isNull(bomHeaderList))
+                throw new fairyCatException("500","该物料没有对应的BOM");
+
+            BomHeader bomHeader_draft = bomHeaderList.get(0);
+            //来到这说明这个传入的物料是根节点 也就是成品 只展示根节点就可以了 后面的子节点不需要展开
+            return BomTreeStructVo.builder()
+                    .qty(bomHeader_draft.getBaseQty())
+                    .unit(bomHeader_draft.getUnit())
+                    .materialName(bomHeader_draft.getProductName())
+                    .materialCode(bomHeader_draft.getProductCode())
+                    .materialId(bomHeader_draft.getProductId())
+                    .id(bomHeader_draft.getId())
+                    .build();
+
+//            throw new fairyCatException("500","该物料不存在或它没有一个已经启用了的BOM");
+        }
 
         //接着拿着查到的这条记录bom_id去子表Bom-Item中找它所在树中第二层的所有子节点
         //这里测试后发现需要分情况 一种情况是成品(根节点) 这里可以用bomId跟ParentId去找
@@ -215,6 +234,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
                     .materialId(bomHeader.getProductId())
                     .materialCode(bomHeader.getProductCode())
                     .materialName(bomHeader.getProductName())
+                    .id(bomHeader.getId())
                     .build();
 
             //这里就是存的所有子节点的值
@@ -272,6 +292,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
                                         .materialId(bomHeader666.getProductId())
                                         .materialName(bomHeader666.getProductName())
                                         .materialCode(bomHeader666.getProductCode())
+                                        .id(bomHeader666.getId())
                                         .build()
                         );
                     }
@@ -308,6 +329,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
                 .materialId(bomItem.getMaterialId())
                 .materialCode(bomItem.getMaterialCode())
                 .materialName(bomItem.getMaterialName())
+                .id(iBomHeaderService.getBomHeaderIdByMaterialId(bomItem.getMaterialId()))
                 .build();
 
         //然后在bom明细表中找它的所有子节点 如果有记录的parentId存着它的id的话
@@ -363,6 +385,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
                             .materialId(bomHeader1.getProductId())
                             .materialCode(bomHeader1.getProductCode())
                             .materialName(bomHeader1.getProductName())
+                            .id(bomHeader1.getId())
                             .build());
                 }
             }

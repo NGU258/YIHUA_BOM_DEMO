@@ -25,6 +25,9 @@ public class BomTreeStructVo {
 
     private Long materialId;
 
+    //为了方便测试展开接口这里就加了个id字段  存储bomHeader对应的id null代表是原材料
+    private Long id;
+
     @Builder.Default
     private List<BomTreeStructVo> childNode = new ArrayList<>();
 }

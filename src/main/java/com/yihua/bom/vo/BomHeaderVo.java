@@ -20,8 +20,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class BomHeaderVo {
-    private Long id;
+    private Long materialId;
+    private String materialCode;
+    private String materialName;
+    private String status;
+    private Integer isDefault;
     private String bomCode;
     private String bomName;
-    private String status;
+    private Long id;
 }
