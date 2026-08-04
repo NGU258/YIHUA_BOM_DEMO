@@ -12,6 +12,14 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+//测试数据
+// {
+//        "bomCode":"fairyCat001",
+//        "bomName":"BOM-E-001",
+//        "productId":1,
+//        "bomVersion":"V1",
+//        "unit":"单位"
+//}
 @Data
 @Builder
 @NoArgsConstructor

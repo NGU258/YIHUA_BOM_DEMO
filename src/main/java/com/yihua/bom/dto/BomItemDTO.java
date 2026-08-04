@@ -5,8 +5,17 @@ import lombok.Builder;
 import lombok.Data;
 
 import javax.validation.constraints.DecimalMin;
+import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
+//测试数据
+//      {
+//        "parentId":4,
+//        "materialId":7,
+//        "itemNo":10,
+//        "qty":3,
+//        "unit":"组"
+//       }
 @Data
 @Builder
 public class BomItemDTO {
@@ -25,6 +34,7 @@ public class BomItemDTO {
     //这样的设计性能更好  也就是空间换时间的逻辑
     //这里还有一个好处就是在更新的时候 当用户没有传对应material的相关字段时
     //在更新逻辑中防止使用BeanUtils.copyProperties函数直接转为null
+    @NotNull(message = "物料id不能为空")
     private Long materialId;
 
 
@@ -47,6 +57,7 @@ public class BomItemDTO {
     //这里多出来的0.1就是损耗了 但仓库会实际按2.1发料
     //这个字段是比例损耗  生产多少损耗就会成比例增长
     @Builder.Default
+    @DecimalMin(value = "0" , message = "损耗率(loss_rate)不能小于0")
     private BigDecimal lossRate = BigDecimal.ZERO;
 
 

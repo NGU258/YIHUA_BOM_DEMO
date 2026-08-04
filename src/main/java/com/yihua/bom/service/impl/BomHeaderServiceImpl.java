@@ -38,12 +38,28 @@ public class BomHeaderServiceImpl extends ServiceImpl<BomHeaderMapper, BomHeader
     @Transactional
     public BomHeader createBomHeader(BomHeaderDTO b) {
 
+        if(Objects.isNull(b.getBomCode())||Objects.isNull(b.getProductId()))
+            throw new fairyCatException("400","BOM编码跟产品ID不能为空");
+
         BomHeader bomHeader = new BomHeader();
         BeanUtils.copyProperties(b,bomHeader);
 
+        LambdaQueryWrapper<BomHeader> lqw1 = new LambdaQueryWrapper<>();
+        lqw1.eq(BomHeader::getBomCode,b.getBomCode());
+        if(!Objects.isNull(getOne(lqw1)))
+            throw new fairyCatException("500","BOM编码已重复");
+
+        //通过bomCode跟productId来判断BomHeader表中是否有一条记录是草稿状态的 如果有则提示物料编码不能重复
+        LambdaQueryWrapper<BomHeader> lqw2 = new LambdaQueryWrapper<>();
+        lqw2.eq(BomHeader::getBomCode,bomHeader.getBomCode())
+                .eq(BomHeader::getProductId,bomHeader.getProductId())
+                .eq(BomHeader::getStatus,BomStatus.DRAFT.getValue());
+
+        if(baseMapper.selectCount(lqw2)>0)
+            throw new fairyCatException("500","物料编码已重复，草稿状态BOM已存在");
+
         //因为这里已经知道product_id了 所以我需要回填对应的product_code跟product_name
         BomHeader bh = getById(bomHeader.getProductId());
-
         bomHeader.setProductCode(bh.getProductCode());
         bomHeader.setProductName(bh.getProductName());
 

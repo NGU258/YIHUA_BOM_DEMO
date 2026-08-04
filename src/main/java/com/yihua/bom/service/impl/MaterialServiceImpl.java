@@ -16,6 +16,7 @@ import com.yihua.bom.service.IBomHeaderService;
 import com.yihua.bom.service.IBomItemService;
 import com.yihua.bom.service.IMaterialService;
 import com.yihua.bom.vo.BomTreeStructVo;
+import com.yihua.bom.vo.MateiralVo;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -77,10 +78,23 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
     @Transactional
     public Material createMaterial(MaterialDTO m) {
 
+        //用于错误拼接
+        StringBuilder sb = new StringBuilder();
+
         Material material = new Material();
         BeanUtils.copyProperties(m,material);
 
         material.setDeleted(0);
+
+        LambdaQueryWrapper<Material> lqw = new LambdaQueryWrapper<>();
+        lqw.eq(Material::getMaterialCode,m.getMaterialCode());
+
+        if(!Objects.isNull(getOne(lqw)))
+             sb.append("物料编码不能重复");
+
+        if(sb.length() != 0)
+             throw new fairyCatException("500",sb.toString());
+
         int result = materialMapper.insert(material);
 
         if(result != 1)
@@ -165,7 +179,6 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
 
         LambdaQueryWrapper<BomHeader> lqw_header = new LambdaQueryWrapper<>();
         lqw_header.eq(BomHeader::getProductId,materialId)
-
                 .eq(BomHeader::getStatus,BomStatus.ACTIVE.getValue());
 
         //先找这个物料对应的启用Bom-Header记录
@@ -239,12 +252,15 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
 
         //然后再找当前节点的所有子节点
         List<BomItem> childNode = iBomItemService.list(lqw);
-        for(BomItem cur: childNode){
-                List<BomTreeStructVo> bomTreeStructVoList = new ArrayList<>();
+        List<BomTreeStructVo> bomTreeStructVoList = new ArrayList<>();
+        for(BomItem cur: childNode)
                 bomTreeStructVoList.add(findBomTreeStructByBomItemId(bomId,cur.getId()));
-                bomTreeStructVo.setChildNode(bomTreeStructVoList);
-        }
-
+        bomTreeStructVo.setChildNode(bomTreeStructVoList);
         return bomTreeStructVo;
+    }
+
+    @Override
+    public List<MateiralVo> summaryToTalQtyByMaterialId(Long materialId) {
+        return null;
     }
 }

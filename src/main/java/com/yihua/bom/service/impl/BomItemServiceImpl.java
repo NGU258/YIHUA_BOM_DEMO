@@ -3,15 +3,19 @@ package com.yihua.bom.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yihua.bom.Mapper.BomItemMapper;
+import com.yihua.bom.constants.Enum.bom.BomIssueType;
 import com.yihua.bom.dto.BomItemDTO;
+import com.yihua.bom.entity.BomHeader;
 import com.yihua.bom.entity.BomItem;
 import com.yihua.bom.entity.Material;
 import com.yihua.bom.exception.fairyCatException;
+import com.yihua.bom.service.IBomHeaderService;
 import com.yihua.bom.service.IBomItemService;
 import com.yihua.bom.service.IMaterialService;
 import com.yihua.bom.util.BeanCopyUtils;
 import com.yihua.bom.vo.BomItemVo;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -23,8 +27,11 @@ public class BomItemServiceImpl extends ServiceImpl<BomItemMapper, BomItem> impl
 
     private final IMaterialService iMaterialService;
 
-    public BomItemServiceImpl(IMaterialService i){
+    private final IBomHeaderService iBomHeaderService;
+
+    public BomItemServiceImpl(@Lazy IMaterialService i, @Lazy IBomHeaderService ib){
         iMaterialService = i;
+        iBomHeaderService = ib;
     }
 
     //这里调用selectList的时候要注意位置
@@ -42,6 +49,8 @@ public class BomItemServiceImpl extends ServiceImpl<BomItemMapper, BomItem> impl
     public BomItem createBomItem(Long bomId, BomItemDTO b) {
 
         BomItem bomItem = new BomItem();
+        if(Objects.isNull(b.getIssueType()))
+            b.setIssueType(BomIssueType.NORMAL.getValue());
         BeanUtils.copyProperties(b,bomItem);
         bomItem.setBomId(bomId);
 
@@ -54,8 +63,20 @@ public class BomItemServiceImpl extends ServiceImpl<BomItemMapper, BomItem> impl
             bomItem.setMaterialSpec(material.getSpec());
         }
 
-        boolean result = saveOrUpdate(bomItem);
 
+        //校验规则3
+        LambdaQueryWrapper<BomItem> lqw = new LambdaQueryWrapper<>();
+        lqw.eq(BomItem::getBomId,bomItem.getBomId())
+                .eq(BomItem::getParentId,bomItem.getParentId())
+                .eq(BomItem::getMaterialId,bomItem.getMaterialId());
+        if(!Objects.isNull(getOne(lqw)))
+            throw new fairyCatException("400","同一父BOM下不能重复添加相同子物料");
+
+        //校验规则6  这里主要从当前节点出发 遍历到根节点 看下是否有materialId是重复的就可以了
+        if(theMaterialIsOwn(bomItem.getMaterialId(),bomItem.getParentId()))
+            throw new fairyCatException("400","在BOM中不能直接添加自己作为子物料,请传入正确的materialId");
+
+        boolean result = saveOrUpdate(bomItem);
         if(!result)
             throw new fairyCatException("保存Bom明细失败,请联系管理员");
 
@@ -132,12 +153,11 @@ public class BomItemServiceImpl extends ServiceImpl<BomItemMapper, BomItem> impl
          lqw.eq(BomItem::getParentId,bomItemId);
 
          List<BomItem> childNode = list(lqw);
-         for(BomItem cur : childNode){
-             //这里的话还是把单位与数量放前面显示一点会好点
-             List<BomItemVo> bomItemVoListVo = new ArrayList<>();
+        //这里的话还是把单位与数量放前面显示一点会好点
+        List<BomItemVo> bomItemVoListVo = new ArrayList<>();
+         for(BomItem cur : childNode)
              bomItemVoListVo.add(findBomItemTreeStructByBomItemId(cur.getId()));
-             bomItemVo.setChildNode(bomItemVoListVo);
-         }
+          bomItemVo.setChildNode(bomItemVoListVo);
 
          return bomItemVo;
     }
@@ -156,17 +176,46 @@ public class BomItemServiceImpl extends ServiceImpl<BomItemMapper, BomItem> impl
         lqw.eq(BomItem::getParentId,bomItemId);
 
         List<BomItem> childNode = list(lqw);
-        for(BomItem cur : childNode){
-            //这里的话还是把单位与数量放前面显示一点会好点
-            List<BomItemVo> bomItemVoListVo = new ArrayList<>();
+
+        //这里的话还是把单位与数量放前面显示一点会好点
+        List<BomItemVo> bomItemVoListVo = new ArrayList<>();
+        for(BomItem cur : childNode)
             bomItemVoListVo.add(deleteBomItemTreeStructByBomItemId(cur.getId()));
-            bomItemVo.setChildNode(bomItemVoListVo);
-        }
+        bomItemVo.setChildNode(bomItemVoListVo);
 
         Boolean result = removeById(bomItemId);
         if(!result)
             throw new fairyCatException("500","递归删除明细失败");
 
         return bomItemVo;
+    }
+
+    @Override
+    public Boolean theMaterialIsOwn(Long materialId, Long parentId) {
+
+            LambdaQueryWrapper<BomItem> lqw1 = new LambdaQueryWrapper<>();
+            lqw1.eq(BomItem::getId,parentId);
+            BomItem bomItem = getOne(lqw1);
+            if(Objects.isNull(bomItem))
+                throw new fairyCatException("400","传入了一个错误的parentId,请联系管理员");
+
+            if(bomItem.getMaterialId().equals(materialId))
+                    return true;
+
+            if(bomItem.getParentId().longValue() == 0l){
+                //这里测试时发现没有遍历到根节点  所以还需要再查一下
+                LambdaQueryWrapper<BomHeader> lqw2 =new LambdaQueryWrapper<>();
+                lqw2.eq(BomHeader::getId,bomItem.getBomId());
+
+                BomHeader bomHeader = iBomHeaderService.getOne(lqw2);
+                if(Objects.isNull(bomHeader))
+                    throw new fairyCatException("500","在校验规则6中，往根节点出发的路径上发现根节点不存在");
+                if(bomHeader.getProductId().equals(materialId))
+                    return true;
+                else return false;
+
+            }
+
+            return theMaterialIsOwn(materialId,bomItem.getParentId());
     }
 }

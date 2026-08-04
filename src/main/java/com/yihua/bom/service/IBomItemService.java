@@ -20,4 +20,6 @@ public interface IBomItemService extends IService<BomItem> {
 
     BomItemVo deleteBomItemTreeStructByBomItemId(Long bomItemId);
 
+    Boolean theMaterialIsOwn(Long materialId,Long parentId);
+
 }

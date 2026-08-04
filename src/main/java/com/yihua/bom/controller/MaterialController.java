@@ -30,7 +30,7 @@ public class MaterialController {
     //只是validated注解比valid注解要更强一点
     //validated是Spring自己封装的 一个增强版本
     //valid是 JAVA EE的
-    @PostMapping("/create")
+    @PostMapping
     public Result<Material> addMaterial(@Validated @RequestBody MaterialDTO m){
 
           Material material = iMaterialService.createMaterial(m);

@@ -25,7 +25,7 @@ public class BomItemController {
          return Result.success("创建明细成功",bomItem);
     }
 
-    //这个itemId指的就是bomItemId
+    //这个itemId指的就是bomItem的Id
     @PutMapping("/{bomItemId}")
     public Result<BomItem> updateBomItemByBomIdAndItemId(@PathVariable Long bomId,
                                          @PathVariable Long bomItemId,
