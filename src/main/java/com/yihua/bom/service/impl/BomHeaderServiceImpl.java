@@ -30,9 +30,12 @@ public class BomHeaderServiceImpl extends ServiceImpl<BomHeaderMapper, BomHeader
 
     private final IMaterialService iMaterialService;
 
-    public BomHeaderServiceImpl(IBomItemService ib,IMaterialService im){
+    private final IBomHeaderService iBomHeaderService;
+
+    public BomHeaderServiceImpl(@Lazy IBomItemService ib, @Lazy IMaterialService ims,@Lazy IBomHeaderService ibs){
         this.iBomItemService = ib;
-        this.iMaterialService = im;
+        this.iMaterialService = ims;
+        this.iBomHeaderService = ibs;
     }
     @Override
     @Transactional
@@ -49,19 +52,21 @@ public class BomHeaderServiceImpl extends ServiceImpl<BomHeaderMapper, BomHeader
         if(!Objects.isNull(getOne(lqw1)))
             throw new fairyCatException("500","BOM编码已重复");
 
-        //通过bomCode跟productId来判断BomHeader表中是否有一条记录是草稿状态的 如果有则提示物料编码不能重复
-        LambdaQueryWrapper<BomHeader> lqw2 = new LambdaQueryWrapper<>();
-        lqw2.eq(BomHeader::getBomCode,bomHeader.getBomCode())
-                .eq(BomHeader::getProductId,bomHeader.getProductId())
-                .eq(BomHeader::getStatus,BomStatus.DRAFT.getValue());
-
-        if(baseMapper.selectCount(lqw2)>0)
-            throw new fairyCatException("500","物料编码已重复，草稿状态BOM已存在");
+//        //通过bomCode跟productId来判断BomHeader表中是否有一条记录是草稿状态的 如果有则提示物料编码不能重复
+//        LambdaQueryWrapper<BomHeader> lqw2 = new LambdaQueryWrapper<>();
+//        lqw2.eq(BomHeader::getBomCode,bomHeader.getBomCode())
+//                .eq(BomHeader::getProductId,bomHeader.getProductId())
+//                .eq(BomHeader::getStatus,BomStatus.DRAFT.getValue());
+//
+//        if(baseMapper.selectCount(lqw2)>0)
+//            throw new fairyCatException("500","物料编码已重复，草稿状态BOM已存在");
 
         //因为这里已经知道product_id了 所以我需要回填对应的product_code跟product_name
         BomHeader bh = getById(bomHeader.getProductId());
         bomHeader.setProductCode(bh.getProductCode());
         bomHeader.setProductName(bh.getProductName());
+        //这个地方就比较关键了 后面判断这个物料的BOM是否需要展开就得用这个字段
+        bomHeader.setIsDefault(1);
 
         Boolean result = saveOrUpdate(bomHeader);
 
@@ -113,7 +118,7 @@ public class BomHeaderServiceImpl extends ServiceImpl<BomHeaderMapper, BomHeader
             throw new fairyCatException("500","数据库Bom主表中未查到该记录");
         BeanUtils.copyProperties(b,bomHeader);
 
-        if(StringUtils.hasText(b.getProductId().toString())){
+        if(!Objects.isNull(b.getProductId())){
             //如果物料id有值 我才需要进行回填
             Material material = iMaterialService.getById(b.getProductId());
             bomHeader.setProductCode(material.getMaterialCode());
@@ -162,12 +167,32 @@ public class BomHeaderServiceImpl extends ServiceImpl<BomHeaderMapper, BomHeader
     @Override
     @Transactional
     public BomHeaderVo activeBomStatus(Long bomId) {
+
         BomHeader bomHeader = getById(bomId);
         if(Objects.isNull(bomHeader))
             throw new fairyCatException("500","在启用BOM时发现要找的BOM在数据库中并没有记录");
+
         bomHeader.setStatus(BomStatus.ACTIVE.getValue());
         //这是的逻辑就是如果它是启用状态 则代表它是一个默认版本 用1来标识
         bomHeader.setIsDefault(1);
+
+        //启用了当前产品的这个BOM后 其它当前产品的BOM将被停用
+        LambdaQueryWrapper<BomHeader> lqw = new LambdaQueryWrapper<>();
+        lqw.eq(BomHeader::getProductId,bomHeader.getProductId());
+
+        List<BomHeader> bomHeaderList = iBomHeaderService.list(lqw);
+
+        for(BomHeader cur: bomHeaderList){
+            //如果是自己 则跳过
+            if(cur.getId().equals(bomHeader.getId()))
+                continue;
+            //其它情况需要将状态改成DRAFT 然后is_Default改成0
+            cur.setStatus(BomStatus.DISABLED.getValue());
+            cur.setIsDefault(0);
+            Boolean result = iBomHeaderService.updateById(cur);
+            if(!result)
+                throw new fairyCatException("500","在启用该产品BOM时发现停用该产品其它BOM版本时出错，请联系管理员");
+        }
 
         Boolean result = updateById(bomHeader);
         if(!result)

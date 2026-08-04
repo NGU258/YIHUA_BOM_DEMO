@@ -52,7 +52,7 @@ public class BomHeaderController {
     }
 
     //通过bomId来删除Bom主表中的记录以及Bom子表中的相关联的明细
-    @DeleteMapping("{bomId}")
+    @DeleteMapping("/{bomId}")
     public Result<Map<String,Object>> deleteBomHeaderAndItemByBomId(@PathVariable Long bomId){
 
         Map<String,Object> bomHeader = iBomHeaderService.deleteBomHeaderAndItemByBomId(bomId);
