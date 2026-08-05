@@ -16,18 +16,15 @@ import com.yihua.bom.service.IBomHeaderService;
 import com.yihua.bom.service.IBomItemService;
 import com.yihua.bom.service.IMaterialService;
 import com.yihua.bom.vo.BomTreeStructVo;
-import com.yihua.bom.vo.MateiralVo;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
+import com.yihua.bom.vo.MaterialVo;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.math.BigDecimal;
+import java.util.*;
 
 // @AllArgsConstructor 注解生成的构造器所包含的字段 ： 所有final与非final字段
 // 后面如果自己再加一点其它的类变量 则也会被生成出来 但一般这里的全参构造器只生成那些需要依赖进来的对象就可以了
@@ -387,17 +384,188 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
                             .materialName(bomHeader1.getProductName())
                             .id(bomHeader1.getId())
                             .build());
+//                    bomTreeStructVoList.add(bomTreeStructVo);  上次写成这种方式好像触发死循环添加的Bug了
                 }
             }
-
         }
-
         bomTreeStructVo.setChildNode(bomTreeStructVoList);
         return bomTreeStructVo;
     }
 
     @Override
-    public List<MateiralVo> summaryToTalQtyByMaterialId(Long materialId) {
-        return null;
+    public List<MaterialVo> summaryToTalQtyByMaterialId(Long materialId) {
+
+        List<MaterialVo> materialVoList = new ArrayList<>();
+
+        //判断传入的物料id是原材料的情况
+        LambdaQueryWrapper<Material> lqw_material = new LambdaQueryWrapper<>();
+        lqw_material.eq(Material::getId, materialId);
+        Material material = getOne(lqw_material);
+        if (Objects.isNull(material))
+            throw new fairyCatException("500", "填入的物料id有误，物料表中不存在该物料");
+
+        LambdaQueryWrapper<BomHeader> lqw = new LambdaQueryWrapper<>();
+        lqw.eq(BomHeader::getProductId, material.getId())
+                .eq(BomHeader::getStatus, BomStatus.ACTIVE.getValue());
+        //这里因为可能会有启用、停用、草稿状态的对应BOM 所以需要先看启用的 再看草稿的
+        BomHeader b1 = iBomHeaderService.getOne(lqw);
+        BomHeader b2 = null;
+        BomHeader b3 = null;
+        if (Objects.isNull(b1)) {
+            //如果启用的没有找到 就找草稿状态的
+            lqw.clear();
+            lqw.eq(BomHeader::getProductId, material.getId())
+                    .eq(BomHeader::getStatus, BomStatus.DRAFT.getValue());
+            b2 = iBomHeaderService.getOne(lqw);
+            if (Objects.isNull(b2)) {
+                lqw.clear();
+                lqw.eq(BomHeader::getProductId, material.getId());
+                List<BomHeader> bomHeaderList = iBomHeaderService.list(lqw);
+                if (Objects.isNull(bomHeaderList))
+                    throw new fairyCatException("500", "这个物料没有对应的BOM，请去添加它的BOM结构");
+
+                b3 = bomHeaderList.get(0);
+            }
+        }
+
+        BomHeader bResult = b1 != null ? b1 : b2 != null ? b2 : b3 != null ? b3 : null;
+        //这里需要用全局的 不然局部的话重新进去的时候之前存好的结果就又是空的了
+        Map<Long,MaterialVo> hashMap = new HashMap<>();
+        //这里判断的是第一层节点（根节点）的物料类型
+        if (MaterialType.RAW_MATERIAL.getValue().equalsIgnoreCase(material.getMaterialType())) {
+            //如果它是原材料的话 就直接返回它自己就可以了
+            materialVoList.add(MaterialVo.builder()
+                    .totalQty(bResult.getBaseQty())
+                    .unit(bResult.getUnit())
+                    .materialName(bResult.getProductName())
+                    .materialCode(bResult.getProductCode())
+                    .materialId(bResult.getProductId())
+                    .build());
+        }else if(MaterialType.PRODUCT.getValue().equalsIgnoreCase(material.getMaterialType())) {
+            //传入的物料是成品
+            //先找一下第二层的节点
+            LambdaQueryWrapper<BomItem> lqw_bomItem = new LambdaQueryWrapper<>();
+            lqw_bomItem.eq(BomItem::getBomId, bResult.getId()) //半成品不能这样查
+                    .eq(BomItem::getParentId, 0l);
+            List<BomItem> bomItemList = iBomItemService.list(lqw_bomItem);
+            for (BomItem cur : bomItemList) {
+                    if (isRawMaterialByMaterialId(cur.getMaterialId())) {
+                        //子节点是原材料的情况
+                        materialVoList.add(
+                                MaterialVo.builder()
+                                        .totalQty(cur.getQty().multiply(bResult.getBaseQty()))
+                                        .unit(cur.getUnit())
+                                        .materialName(cur.getMaterialName())
+                                        .materialCode(cur.getMaterialCode())
+                                        .materialId(cur.getMaterialId())
+                                        .build()
+                        );
+                    } else {
+                        //子节点是半成品或成品(这个成品是其它树下的半成品)的情况
+                        hashMap = summaryMaterialTotalQty(bResult.getId(), cur.getId(), hashMap, cur.getQty().multiply(bResult.getBaseQty()));
+                    }
+            }
+        }else{
+            //传入的物料是个半成品 半成品的话就一视同仁  它们的BOM结构默认一样
+            LambdaQueryWrapper<BomItem> lqw3 = new LambdaQueryWrapper<>();
+            lqw3.eq(BomItem::getMaterialId,materialId);
+            List<BomItem> bomItemList = iBomItemService.list(lqw3);
+            if(Objects.isNull(bomItemList))
+                throw new fairyCatException("400","该半成品没有对应的BOM明细");
+            BomItem bomItem = bomItemList.get(0);
+
+            //这里只需要传数量1了 因为只需要看这个半成品需要多少原材料数量
+            hashMap = summaryMaterialTotalQty(bomItem.getBomId(),bomItem.getId(),hashMap,BigDecimal.ONE);
+        }
+
+        //这里存放的操作需要放这里 不然的话前面加了个炸弹 后面又重复加炸弹进来了 逻辑就不对了
+        hashMap.forEach((key,value)->{
+            materialVoList.add(value);
+//            System.out.println("key: "+key+" value: "+value);
+        });
+        return materialVoList;
+    }
+
+    @Override
+    //前面两个id用于找子节点
+    // 这个数组List<MaterialVo> 会存储相同的物料 所以被优化成Map了
+    //long存对应的物料Id，后面那个就存原材料的值
+    public Map<Long,MaterialVo> summaryMaterialTotalQty(Long bomId, Long bomItemId,  Map<Long,MaterialVo> materialVoMap, BigDecimal multQty) {
+
+        //先找一下它的子节点
+        LambdaQueryWrapper<BomItem> lqw = new LambdaQueryWrapper<>();
+        lqw.eq(BomItem::getBomId,bomId)
+                .eq(BomItem::getParentId,bomItemId);
+        List<BomItem> bomItemList = iBomItemService.list(lqw);
+
+        if(Objects.isNull(bomItemList)){
+            //找不到说明已经到原材料了
+
+            //清空条件找一下这个原材料在bomItem中的位置
+            lqw.clear();
+            lqw.eq(BomItem::getBomId,bomId)
+                            .eq(BomItem::getId,bomItemId);
+            BomItem bomItem = iBomItemService.getOne(lqw);
+            if(Objects.isNull(bomItem))
+                 throw new fairyCatException("500","灵异事件，请联系程序员");
+
+            if(Objects.isNull(materialVoMap.get(bomItem.getMaterialId()))){
+                //如果这个原材料是第一次出现的话 就存进来
+                materialVoMap.put(bomItem.getMaterialId(),
+                         MaterialVo.builder()
+                        .totalQty(multQty.multiply(bomItem.getQty()))
+                        .unit(bomItem.getUnit())
+                        .materialName(bomItem.getMaterialName())
+                        .materialCode(bomItem.getMaterialCode())
+                        .materialId(bomItem.getMaterialId())
+                        .build());
+            }else{
+                //否则的话说明前面已经存过这个原材料了
+                //就将这个原材料的qty加进来就可以了
+                MaterialVo materialVo = materialVoMap.get(bomItem.getMaterialId());
+                materialVo.setTotalQty(materialVo.getTotalQty().add(bomItem.getQty().multiply(multQty)));
+                materialVoMap.put(materialVo.getMaterialId(),materialVo);
+            }
+        }
+
+        //遍历每个子节点
+        for(BomItem cur : bomItemList){
+            if(isRawMaterialByMaterialId(cur.getMaterialId())){
+
+                //在展开的时候发现是原材料
+                //如果是空的话就加进去
+                if(Objects.isNull(materialVoMap.get(cur.getMaterialId())))
+                    materialVoMap.put(cur.getMaterialId(),
+                                 MaterialVo.builder()
+                                .totalQty(cur.getQty().multiply(multQty))
+                                .unit(cur.getUnit())
+                                .materialName(cur.getMaterialName())
+                                .materialCode(cur.getMaterialCode())
+                                .materialId(cur.getMaterialId())
+                                .build());
+                //反之就累加qty
+                else{
+                    MaterialVo materialVo = materialVoMap.get(cur.getMaterialId());
+                    materialVo.setTotalQty(materialVo.getTotalQty().add(cur.getQty().multiply(multQty)));
+                    materialVoMap.put(cur.getMaterialId(),materialVo);
+                }
+            }else{
+                //半成品就继续递归
+                return summaryMaterialTotalQty(cur.getBomId(),cur.getId(),materialVoMap,multQty.multiply(cur.getQty()));
+            }
+        }
+
+        return materialVoMap;
+
+    }
+
+    @Override
+    public Boolean isRawMaterialByMaterialId(Long materialId) {
+        Material material = getById(materialId);
+        if(Objects.isNull(material))
+            throw new fairyCatException("400","传入的物料id有误，该物料在物料表中不存在");
+        if(MaterialType.RAW_MATERIAL.getValue().equalsIgnoreCase(material.getMaterialType()))
+            return true;
+        return false;
     }
 }

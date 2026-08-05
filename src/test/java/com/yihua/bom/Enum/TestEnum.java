@@ -3,8 +3,12 @@ package com.yihua.bom.Enum;
 import com.yihua.bom.constants.Enum.bom.BomType;
 import com.yihua.bom.constants.Enum.material.MaterialType;
 import com.yihua.bom.constants.constant.BOMConstants;
+import com.yihua.bom.vo.MaterialVo;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @SpringBootTest
 public class TestEnum {
@@ -29,5 +33,26 @@ public class TestEnum {
     @Test
     public void TestConstantsCall(){
         System.out.println(BOMConstants.BOM_TYPE_MBOM);//这里调用就会把里面的所有常量名都显示出来 就显得有点冗余了
+    }
+
+    @Test
+    public void testMap(){
+        Map<Long, MaterialVo> map  = new HashMap<>();
+        map.put(1l,MaterialVo.builder().materialName("元气小喵仙1").build());
+        map.put(2l,MaterialVo.builder().materialName("元气小喵仙2").build());
+
+        map.forEach((key,value)->{
+            System.out.println("当前的key: "+key);
+            System.out.println("当前的value(直接调用): "+value);
+        });
+
+        System.out.println("通过key获取对应的value : "+map.get(1l));
+        System.out.println("通过key获取对应的value : "+map.get(3l));//不存在 应该返回null
+
+        map.put(1l,MaterialVo.builder().materialName("元气小喵仙666").build());
+
+        System.out.println(map.get(1l)); //果然会更新掉
+
+
     }
 }

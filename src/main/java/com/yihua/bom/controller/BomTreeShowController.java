@@ -2,7 +2,7 @@ package com.yihua.bom.controller;
 
 import com.yihua.bom.service.IMaterialService;
 import com.yihua.bom.vo.BomTreeStructVo;
-import com.yihua.bom.vo.MateiralVo;
+import com.yihua.bom.vo.MaterialVo;
 import com.yihua.bom.vo.Result;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,9 +28,10 @@ public class BomTreeShowController {
     }
 
     //统计生产指定物料(成品或半成品)需要多少原材料
+    //这里用set【
     @GetMapping("/{materialId}/summary")
-    public Result<List<MateiralVo>> summaryTotalQtyByMaterialId(@PathVariable Long materialId){
-        List<MateiralVo> materialList = iMaterialService.summaryToTalQtyByMaterialId(materialId);
+    public Result<List<MaterialVo>> summaryTotalQtyByMaterialId(@PathVariable Long materialId){
+        List<MaterialVo> materialList = iMaterialService.summaryToTalQtyByMaterialId(materialId);
         return Result.success("已成功汇总生产该物料所需要的标准用量",materialList);
 
     }

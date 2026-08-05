@@ -63,18 +63,17 @@ public class BomItemServiceImpl extends ServiceImpl<BomItemMapper, BomItem> impl
             bomItem.setMaterialSpec(material.getSpec());
         }
 
-
         //校验规则3
         LambdaQueryWrapper<BomItem> lqw = new LambdaQueryWrapper<>();
         lqw.eq(BomItem::getBomId,bomItem.getBomId())
                 .eq(BomItem::getParentId,bomItem.getParentId())
                 .eq(BomItem::getMaterialId,bomItem.getMaterialId());
         if(!Objects.isNull(getOne(lqw)))
-            throw new fairyCatException("400","同一父BOM下不能重复添加相同子物料");
+            throw new fairyCatException("400","同一父节点下不能重复添加相同子物料");
 
         //校验规则6  这里主要从当前节点出发 遍历到根节点 看下是否有materialId是重复的就可以了
         if(theMaterialIsOwn(bomItem.getMaterialId(),bomItem.getParentId()))
-            throw new fairyCatException("400","在BOM中不能直接添加自己作为子物料,请传入正确的materialId");
+            throw new fairyCatException("400","检测到循环引用！ 在Bom中不能直接添加自己为子物料，请填入一个正确的物料id");
 
         boolean result = saveOrUpdate(bomItem);
         if(!result)
@@ -203,7 +202,7 @@ public class BomItemServiceImpl extends ServiceImpl<BomItemMapper, BomItem> impl
                     return true;
 
             if(bomItem.getParentId().longValue() == 0l){
-                //这里测试时发现没有遍历到根节点  所以还需要再查一下
+                //这里测试时发现没有遍历到根节点  所以还需要再去BomHeader表里面再查一下根节点
                 LambdaQueryWrapper<BomHeader> lqw2 =new LambdaQueryWrapper<>();
                 lqw2.eq(BomHeader::getId,bomItem.getBomId());
 
