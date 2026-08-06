@@ -72,4 +72,10 @@ public class BomHeaderController {
          return Result.success("停用成功",bomHeaderVo);
     }
 
+    @PostMapping("/{bomId}/copy")
+    public Result<Map<String,Object>> copyBomHeaderAndBomItemByBomId(@PathVariable Long bomId){
+            Map<String,Object> copyBomMap = iBomHeaderService.copyBomHeaderAndBomItemByBomId(bomId);
+            return Result.success("复制成功",copyBomMap);
+    }
+
 }

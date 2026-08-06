@@ -2,7 +2,9 @@ package com.yihua.bom.entity;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.util.StringUtils;
 
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -66,6 +68,21 @@ public class TestMaterial {
             String fieldName = matcher2.group(1);
             System.out.println("字段值名： "+fieldName);
         }
+
+        Pattern pattern1 = Pattern.compile(".*-([a-zA-Z0-9]+)");
+        Pattern pattern2 = Pattern.compile(".*-(\\d*)");
+        //在正则表达式中 \d表示匹配任意一个数字 等价[0-9]
+        //Java中String的format方法 等价于C中的printf方法 语法几乎一样
+        Matcher matcher1 = pattern1.matcher("BOM-A-0001");
+        if(matcher1.find())
+            System.out.println("截取的值： "+matcher1.group(1));
+        Matcher matcher3 = pattern2.matcher("BOM-A-");
+        //这里测试发现如果group没有捕获到的话会返回一个空字符串""
+        if(matcher3.find())
+            System.out.println("使用\\d截取的值： "+matcher3.group(1)+ StringUtils.hasText(matcher3.group(1))+(matcher3.group(1).equals("")));
+
+
+
     }
 
     //测试贪婪模式.+与非贪婪模式.+?
@@ -91,5 +108,36 @@ public class TestMaterial {
             // 输出: a
         }
     }
+
+    @Test
+    public void testStringFormat(){
+        String testStr = "BOM-A-0001";
+
+        System.out.println(testStr);
+
+        String newTestStr = testStr.replace("0001","0002");
+        System.out.println(testStr);
+
+        System.out.println(newTestStr);
+
+        System.out.println(String.format("%04d",2));
+    }
+
+    @Test
+    public void testZZLambda(){
+        Matcher matcher = Pattern.compile("(\\d+)$").matcher("BOM-半成品B-v1");
+        if(matcher.find())
+            System.out.println(matcher.group(1));
+    }
+
+    @Test
+    public void testReplace(){
+        String orginStr = "Good morning~";
+        orginStr = orginStr.replace("66","00");
+        System.out.println(orginStr);
+
+    }
+
+
 }
 

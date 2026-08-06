@@ -212,7 +212,6 @@ public class BomItemServiceImpl extends ServiceImpl<BomItemMapper, BomItem> impl
                 if(bomHeader.getProductId().equals(materialId))
                     return true;
                 else return false;
-
             }
 
             return theMaterialIsOwn(materialId,bomItem.getParentId());

@@ -26,4 +26,8 @@ public interface IBomHeaderService extends IService<BomHeader> {
     BomHeaderVo disableBomStatus(Long bomId);
 
     Long getBomHeaderIdByMaterialId(Long materialId);
+
+    Map<String, Object> copyBomHeaderAndBomItemByBomId(Long bomId);
+
+    Long returnDraftBomIdByBomMaterialId(Long materialId);
 }
