@@ -25,9 +25,15 @@ public interface IBomHeaderService extends IService<BomHeader> {
 
     BomHeaderVo disableBomStatus(Long bomId);
 
-    Long getBomHeaderIdByMaterialId(Long materialId);
+    Long getActiveBomHeaderIdByMaterialId(Long materialId);
 
     Map<String, Object> copyBomHeaderAndBomItemByBomId(Long bomId);
 
     Long returnDraftBomIdByBomMaterialId(Long materialId);
+
+    //这个方法根据传入进来的BomHeader生成一个对应历史版本状态的草稿BOM 并将它的草稿状态BOMId返回
+    Long returnDraftBomByBomHeader(BomHeader bomHeader);
+
+    //执行Bom主表相关的升版操作
+    BomHeader opHistoryAdd(BomHeader bomHeader);
 }

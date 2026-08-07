@@ -48,6 +48,10 @@ public class BomItemServiceImpl extends ServiceImpl<BomItemMapper, BomItem> impl
     @Override
     public BomItem createBomItem(Long bomId, BomItemDTO b) {
 
+        //思路： 先根据BomId去主表中找一条对应的记录
+        //然后再通过这条记录的物料id判断BOM是否为草稿状态
+        //然后对草稿状态的BOM执行插入就可以了
+
         BomItem bomItem = new BomItem();
         if(Objects.isNull(b.getIssueType()))
             b.setIssueType(BomIssueType.NORMAL.getValue());

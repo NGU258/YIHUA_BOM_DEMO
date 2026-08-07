@@ -5,6 +5,9 @@ server:
 logging:
   pattern:
     console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){cyan} %clr(%-5p){green} %clr(${PID:- }){magenta} --- [%10.10t] %clr(%logger{36}){pink} : %msg%n"
+  level: #这里可以通过提升日志级别解决Mybatis-Plus主键自增带来的问题 比如Header的id是null 然后我设置一个值3 但Mybatis-Plus会自动把我刚刚赋值的这个3覆盖掉 按照它的逻辑主键自增(最大id+1)自动赋值 于是就不是更新操作 而是变成插入操作了
+    org.apache.ibatis: debug
+    com.yihua.bom: debug
 
 #数据库连接信息
 #useUnicode=true	使用Unicode编码 防止中文乱码
@@ -16,4 +19,3 @@ spring:
     username: root
     password: lyq20041230
     driver-class-name: com.mysql.cj.jdbc.Driver
-

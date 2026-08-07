@@ -186,199 +186,240 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
     @Override
     public BomTreeStructVo BomTreeStructByMaterialId(Long materialId) {
 
-        //根据传过来的物料id找到它对应已启用的BomHeader记录
+        //先定义一个存储BOM树结构的对象
+        BomTreeStructVo bomTreeStructVo = new BomTreeStructVo();
+
+        //先判断用户传入的这个物料存不存在
+        LambdaQueryWrapper<Material> lqw =new LambdaQueryWrapper<>();
+        lqw.eq(Material::getId,materialId);
+        Material material = getOne(lqw);
+        if(Objects.isNull(material))
+            throw new fairyCatException("400","物料表中不存在该物料，请填入一个正确的物料id");
+
+        //如果用户传入的是原材料 则提示原材料没有对应的BOM
+        if(MaterialType.RAW_MATERIAL.getValue().equalsIgnoreCase(material.getMaterialType()))
+             throw new fairyCatException("400","原材料没有对应的BOM结构");
+
+        //接着就可以去找它已启用的BOM了
+        //优化思路 先把物料对应的所有BOM全部都查出来 然后再用for循环遍历找那个ACTIVE状态的BOM 这样就可以不用两次请求都打到数据库了
         LambdaQueryWrapper<BomHeader> lqw_header = new LambdaQueryWrapper<>();
-        lqw_header.eq(BomHeader::getProductId,materialId)
-                .eq(BomHeader::getStatus,BomStatus.ACTIVE.getValue());
-        BomHeader bomHeader =iBomHeaderService.getOne(lqw_header);
-        if(Objects.isNull(bomHeader)){
-            //这里我需要展示一下成品根节点信息 所以需要对这个物料有没有bomHeader做一个判断
-            //如果没有的话就展示一下根节点的信息
-            lqw_header.clear();
-            lqw_header.eq(BomHeader::getProductId,materialId);
-            List<BomHeader> bomHeaderList = iBomHeaderService.list(lqw_header); //优化思路： 先全部查出来 再找这个启用状态的BOM
-            if(Objects.isNull(bomHeaderList))//这里已经排队了是原材料
-                throw new fairyCatException("500","该物料没有对应的BOM");
+        lqw_header.eq(BomHeader::getProductId,materialId);
+        List<BomHeader> bomHeaderList =iBomHeaderService.list(lqw_header);
+        if(Objects.isNull(bomHeaderList))
+            throw new fairyCatException("400","该物料没有对应的BOM结构，请联系管理员添加");
 
-            BomHeader bomHeader_draft = bomHeaderList.get(0);
-            //来到这说明这个传入的物料是根节点 也就是成品 只展示根节点就可以了 后面的子节点不需要展开
-            return BomTreeStructVo.builder()
-                    .qty(bomHeader_draft.getBaseQty())
-                    .unit(bomHeader_draft.getUnit())
-                    .materialName(bomHeader_draft.getProductName())
-                    .materialCode(bomHeader_draft.getProductCode())
-                    .materialId(bomHeader_draft.getProductId())
-                    .id(bomHeader_draft.getId())
-                    .build();
+        //在遍历之前先创建一个临时Bom 用于当没查找ACTIVE的BOM时在后面填充根节点信息返回给用户展示
+        BomHeader bomHeader = null;
+        //遍历物料对应的所有BOM
+        for(BomHeader cur: bomHeaderList){
+            //找ACTIVE的BOM
+            if(BomStatus.ACTIVE.getValue().equalsIgnoreCase(cur.getStatus())){
 
-//            throw new fairyCatException("500","该物料不存在或它没有一个已经启用了的BOM");
-        }
+                //接着遍历树中第二层的所有子节点 分两种情况
+                //情况一： 传入的物料id是成品(树的根节点) 可以用bomId跟ParentId去找它树下的所有子节点
+                //情况二： 传入的物料id是半成品(物料节点的父节点) 就不能用bomId跟ParentId去找了
+                //        因为BomId的设计主要是存成品(树的根节点)的id  而不是半成品物料的id
+                //        而对于半成品物料 通过调用自己写的递归方法findBomTreeStructByBomItemId传入半成品的bomItemid返回它的BOM结构就行了
 
-        //这里就是找到了一个对应启用的BOM
-        //接着拿着查到的这条记录bom_id去子表Bom-Item中找它所在树中第二层的所有子节点
-        //这里测试后发现需要分情况 一种情况是成品(根节点) 这里可以用bomId跟ParentId去找
-        //但如果是半成品(父物料节点) 就不能用bomId跟ParentId去找了 因为BomId主是记录着成品物料的id  并不是半成品物料的id
-        //而对于半成品物料，直接调用findXXX传入它对应的bomItemid就可以了
+                //这里后面的两个分支都需要用到这个条件构造器 就写到前面了
+                LambdaQueryWrapper<BomItem> lqw_item = new LambdaQueryWrapper<>();
 
-        LambdaQueryWrapper<BomItem> lqw_item = new LambdaQueryWrapper<>(); //这里后面的两个分支都需要用到
-        //来到这里说明肯定能查到一个物料记录 所以可以不用判断了
-        Material material = getById(materialId);
+                //首先判断一下当前节点的物料是成品还是半成品
+                //注意equals是严格区分大小写的 但我需要不区分大小写 所以调用的是equalsIgnoreCase方法 这样传大小写的物料类型就都可以
+                if(MaterialType.PRODUCT.getValue().equalsIgnoreCase(material.getMaterialType())){
+                    //成品的逻辑 先存下根节点的值
+                    bomTreeStructVo = BomTreeStructVo.builder()
+                            .qty(cur.getBaseQty())
+                            .unit(cur.getUnit())
+                            .materialId(cur.getProductId())
+                            .materialCode(cur.getProductCode())
+                            .materialName(cur.getProductName())
+                            .id(cur.getId())
+                            .build();
 
-        BomTreeStructVo bomTreeStructVo = null;
-        //先判断一下这个物料是成品还是半成品
-        //这里测试的时候发现equals是严格区分大小写的 但我需要不区分 所以调用的是equalsIgnoreCase方法 这样传product跟PRODUCT都可以
-        if(MaterialType.PRODUCT.getValue().equalsIgnoreCase(material.getMaterialType())){
-            //成品的情况 这个对象bomTreeStructVo就是存的根节点的值
-            bomTreeStructVo = BomTreeStructVo.builder()
-                    .qty(bomHeader.getBaseQty())
-                    .unit(bomHeader.getUnit())
-                    .materialId(bomHeader.getProductId())
-                    .materialCode(bomHeader.getProductCode())
-                    .materialName(bomHeader.getProductName())
-                    .id(bomHeader.getId())
-                    .build();
+                    //接着就开始存所有子节点的值
+                    //先找树的第二层节点 对应的parentId就是0
+                    List<BomTreeStructVo> bomTreeStructVoList = new ArrayList<>();
+                    lqw_item.eq(BomItem::getBomId,cur.getId())
+                            .eq(BomItem::getParentId, 0L);
+                    List<BomItem> twoNode = iBomItemService.list(lqw_item);
+                    if(Objects.isNull(twoNode)) //如果没有子节点
+                         return bomTreeStructVo; //直接把根节点信息返回给用户看就可以了
 
-            //这里就是存的所有子节点的值
-            List<BomTreeStructVo> bomTreeStructVoList = new ArrayList<>();
-            lqw_item.eq(BomItem::getBomId,bomHeader.getId())
-                    .eq(BomItem::getParentId,0);
-            List<BomItem> twoNode = iBomItemService.list(lqw_item);
+                    //如果有就遍历第二层的所有节点 这里也有两种情况
+                    //一种是半成品
+                    //另一种就是原材料
+                    //这里不会是成品 因为成品是在根节点的位置 不会出现自己存自己的情况
+                    //这里最关键的就是调用递归方法findBomTreeStructByBomItemId方法来查询它们的BOM结构
+                    for(BomItem two: twoNode){
 
-            //遍历第二层的所有节点（可能是半成品 也可能是原材料 因为每个节点的materialId都不一样） 然后调用findXXX方法去查询到这些节点对应的BOM
-            for(BomItem cur: twoNode){
-                //这里需要去bomHeader表里面看第二层节点对应物料的BOM启用状态
-                //这里需要判断两种情况  一种情况是物料id对应的物料本来就没有
-                //另一种情况就是这个物料id对应的其实是原材料  所以我需要先去物料表里面找一下
-                LambdaQueryWrapper<Material> lqw_m = new LambdaQueryWrapper<>();
-                lqw_m.eq(Material::getId,cur.getMaterialId());
-                Material materialRaw = materialMapper.selectOne(lqw_m);
-                if(Objects.isNull(materialRaw))
-                        throw new fairyCatException("500","物料表中没有查找到该物料");
+                        //接着判断当前这个子节点的物料类型
+                        //先去物料表里面找一下存不存在
+                        LambdaQueryWrapper<Material> lqw_m = new LambdaQueryWrapper<>();
+                        lqw_m.eq(Material::getId,two.getMaterialId());
+                        Material materialRaw = getOne(lqw_m);
+                        if(Objects.isNull(materialRaw))
+                            throw new fairyCatException("500","展开BOM树时发现异常： 有个节点的物料在物料表中并没有记录，请联系管理员");
 
-                if(MaterialType.RAW_MATERIAL.getValue().equalsIgnoreCase(materialRaw.getMaterialType())){
-                    //如果是原材料 就直接加进来就可以了
-                    bomTreeStructVoList.add(BomTreeStructVo.builder()
-                                                        .qty(cur.getQty())
-                                                        .unit(cur.getUnit())
-                                                        .materialName(cur.getMaterialName())
-                                                        .materialCode(cur.getMaterialCode())
-                                                        .materialId(materialRaw.getId())
-                                                        .build());
-                }else {
-                    LambdaQueryWrapper<BomHeader> lqw = new LambdaQueryWrapper<>();
-                    //拿bomItem里面的物料id去bomHeader里面查
-                    //如果是半成品 需要看它的BOM状态是否启用
-                    lqw.eq(BomHeader::getProductId,cur.getMaterialId())
-                            //这里就很关键了 物料会对应着多条BOM
-                            //is_default字段的作用就体现出来了 如果是1则是正在用的那个
-                            .eq(BomHeader::getIsDefault,1);
+                        //接着才是判断类型
+                        //如果是原材料 直接加进来就可以了
+                        if(MaterialType.RAW_MATERIAL.getValue().equalsIgnoreCase(materialRaw.getMaterialType())){
+                            bomTreeStructVoList.add(BomTreeStructVo.builder()
+                                    .qty(two.getQty())
+                                    .unit(two.getUnit())
+                                    .materialName(two.getMaterialName())
+                                    .materialCode(two.getMaterialCode())
+                                    .materialId(two.getMaterialId())
+                                    .build());
+                        }else {
+                            //如果是半成品 需要看它的BOM状态是否展开(ACTIVE)
+                            //隐藏的知识点  一个物料会对应多个不同BOM状态的记录 如果我需要找启用状态的那条
+                            //可以看is_default值是1的情况 也可以看status是ACTIVE的情况 它们两是一对的 另一种说法它们就像是事务一致性
 
-                    //这里就是半成品的情况了
-                    BomHeader bh = iBomHeaderService.getOne(lqw);
+                            lqw_header.clear();
+                            //这里也是用的之前的优化思路 先找出这个物料所有的BOM
+                            lqw_header.eq(BomHeader::getProductId,two.getMaterialId());
+                            List<BomHeader> bhList = iBomHeaderService.list(lqw_header);
+                            if(Objects.isNull(bhList))
+                                throw new fairyCatException("400","在展开BOM树时发现有个半成品物料[id: "+two.getMaterialId()+"]没对应的BOM结构，请联系管理员添加");
 
-                    //进来之前判断一波bomHeader里面物料对应的BOM状态是否是启用的
-                    if ( bh!= null && BomStatus.ACTIVE.getValue().equalsIgnoreCase(bh.getStatus()))
-                        bomTreeStructVoList.add(findBomTreeStructByBomItemId(bomHeader.getId(), cur.getId()));
-                    else {
-                        //如果这个半成品不是启用状态 就保存下它的根节点
-                        LambdaQueryWrapper<BomHeader> lqw1 = new LambdaQueryWrapper<>();
-                        lqw1.eq(BomHeader::getProductId,cur.getMaterialId());
-                        //这里可能会有很多条 拿第一条就可以了
-                        List<BomHeader> bomHeaderList = iBomHeaderService.list(lqw1);
-                        BomHeader bomHeader666 = bomHeaderList.get(0);
-                        bomTreeStructVoList.add(
-                                BomTreeStructVo.builder()
-                                        .qty(bomHeader666.getBaseQty())
-                                        .unit(bomHeader666.getUnit())
-                                        .materialId(bomHeader666.getProductId())
-                                        .materialName(bomHeader666.getProductName())
-                                        .materialCode(bomHeader666.getProductCode())
-                                        .id(bomHeader666.getId())
-                                        .build()
-                        );
+                            BomHeader bh1 = null;
+                            boolean signC = true; //防止第一遍没找到 但第二遍找到了  不好用bh1是否等于null来判断 所以需要加这个开关
+                            //然后再全部遍历一遍 找启用状态的
+                            for(BomHeader bh: bhList){
+                                if(BomStatus.ACTIVE.getValue().equalsIgnoreCase(bh.getStatus())){
+                                    //启用状态的话就说明可以展开 调用递归方法继续递归进去找到的BOM结构
+                                    bomTreeStructVoList.add(findBomTreeStructByBomItemId(cur.getId(), two.getId()));
+                                    signC =  false;
+                                    break;
+                                }
+                                bh1 = bh;
+                            }
+                            if(signC){
+                                //这里就是找到其它状态的BOM的情况 也就是未展开状态
+                                //存入这个根节点的信息返回给用户看就可以了
+                                bomTreeStructVoList.add(
+                                        BomTreeStructVo.builder()
+                                                .qty(bh1.getBaseQty())
+                                                .unit(bh1.getUnit())
+                                                .materialId(bh1.getProductId())
+                                                .materialName(bh1.getProductName())
+                                                .materialCode(bh1.getProductCode())
+                                                .id(bh1.getId())
+                                                .build()
+                                );
+                            }
+
+                        } //第二层子节点是半成品的情况->结束
+                    }//遍历第二层子节点->结束
+
+                    //然后将第二层子节点遍历的结果放到这个视图对象的数组中保存
+                    bomTreeStructVo.setChildNode(bomTreeStructVoList);
+
+                    //最后返回就可以了
+                    return bomTreeStructVo;
+
+                }//成品逻辑结束
+                else {
+                    //半成品逻辑 用户传入的是半成品
+                    //这里的设计就是这个半成品的BOM不管在哪颗树下 比如主板不管是在笔记本电脑上还是台式机电脑上 在查看主板BOM结构时默认都是一样的
+
+                    //1. 这里就是半成品启用状态的BOM： 主表对象cur
+
+                    //2. 去找这个半成品在BomItem表中的BomItemId 随便找一个就可以了 因为它路径是没有传bomId的 所以我就默认结构都是一样的了
+                    //这里拿它的物料id来查
+                    LambdaQueryWrapper<BomItem> bomItemLQW = new LambdaQueryWrapper<>();
+                    bomItemLQW.eq(BomItem::getMaterialId,cur.getProductId());
+                    List<BomItem> bomItemList = iBomItemService.list(bomItemLQW);
+                    if(Objects.isNull(bomItemList)) {
+                        //如果是空的，说明这个半成品的展开状态下 它是没有子节点的 直接返回根节点信息就可以了
+                        return BomTreeStructVo.builder()
+                                .qty(cur.getBaseQty())
+                                .unit(cur.getUnit())
+                                .materialName(cur.getProductName())
+                                .materialCode(cur.getProductCode())
+                                .materialId(cur.getProductId())
+                                .id(cur.getId())
+                                .build();
                     }
-                }
-            }
-            bomTreeStructVo.setChildNode(bomTreeStructVoList);
 
-            return bomTreeStructVo;
-        }else{
-            //这个地方是根节点的
-            //这里如果用户传入的物料id是半成品
-            // 老师说没有半成品这种情况 只需要传成品的就可以了
-            //郑经理说公司里面的成品或半成品一般都需要看它的BOM
-            //所以这里的设计就是这个半成品的BOM不管在哪颗树下 比如主板不管是在笔记本电脑上还是台式机电脑上 在查看主板BOM结构时默认都是一样的
-            //直接找对应启用状态的
-            LambdaQueryWrapper<BomHeader> bomHeaderLqw = new LambdaQueryWrapper<>();
-            bomHeaderLqw.eq(BomHeader::getProductId,materialId)
-                    .eq(BomHeader::getStatus,BomStatus.ACTIVE.getValue());
-            BomHeader bomHeader1 = iBomHeaderService.getOne(bomHeaderLqw);
-            BomHeader bomHeader2 = null;
-            if(Objects.isNull(bomHeader1)){
+                    //这里就拿第一条
+                    BomItem bomItem = bomItemList.get(0);
 
-                //如果没有就找草稿的 然后把它展示出来就可以了
-                bomHeaderLqw.clear();
-                bomHeaderLqw.eq(BomHeader::getProductId,materialId)
-                        .eq(BomHeader::getStatus,BomStatus.DRAFT.getValue());
-                bomHeader2 = iBomHeaderService.getOne(bomHeaderLqw);
-                //如果草稿状态的也没有就抛出异常
-                if(Objects.isNull(bomHeader2))
-                    throw new fairyCatException("400","传入的这个半成品没有对应的BOM,请联系管理员添加");
-            }
-            BomHeader bomHeaderResult = bomHeader1 !=null ? bomHeader1: bomHeader2;
+                    //3. 递归进去查BOM结构就可以了
+                    return findBomTreeStructByBomItemId(bomItem.getBomId(),bomItem.getId());
+                }//半成品逻辑结束
+            }//if条件结束
 
-            //这里的bomId有了 也就知道是哪颗树了
-            //然后去它的子表里面随便找一条
-            LambdaQueryWrapper<BomItem> bomItemLQW = new LambdaQueryWrapper<>();
-            bomItemLQW.eq(BomItem::getMaterialId,bomHeaderResult.getProductId());
-            List<BomItem> bomItemList = iBomItemService.list(bomItemLQW);
-            BomItem bomItem = bomItemList.get(0);
+            //如果没找到就保存当前这个非ACTIVE状态的BOM信息
+            bomHeader = cur;
 
-            //如果是半成品 直接返回它的BOM结构就可以了
-            return findBomTreeStructByBomItemId(bomHeaderResult.getId(),bomItem.getId());
-        }
+        }//遍历当前物料所有BOM结束
+
+        //来到这里就说明它没有对应启用状态的BOM
+        //这里我有三种选择 一种是直接返回null(表示没有展开，需要展开才能看到)
+        //另一种情况就是抛出异常 但感觉不是很推荐
+        //最后一种就是我把它的根节点信息展示出来  但子节点不展示 显示为[]就可以了
+
+        //所以直接返回它的根节点信息就可以了
+        return BomTreeStructVo.builder()
+                .qty(bomHeader.getBaseQty())
+                .unit(bomHeader.getUnit())
+                .materialName(bomHeader.getProductName())
+                .materialCode(bomHeader.getProductCode())
+                .materialId(bomHeader.getProductId())
+                .id(bomHeader.getId())
+                .build();
     }
 
+
+    //bomId主要是判断在哪颗树下 这个方法主要还是查半成品的BOM结构 所以需要传入它的bomItemId
     @Override
     public BomTreeStructVo findBomTreeStructByBomItemId(Long bomId,Long bomItemId) {
 
-        //bomId主要是判断在哪颗树下 主要还是看bomItem的Id
-        //先通过bomItemId拿到它所在的那条记录
-        BomItem bomItem = iBomItemService.getById(bomItemId);
+        //1. 先找到这个bomId树下物料所在的那条记录(这里可能递归到半成品 也可能递归到原材料) 用于保存根节点信息
+        LambdaQueryWrapper<BomItem> lqw = new LambdaQueryWrapper<>();
+        lqw.eq(BomItem::getBomId,bomId)
+                .eq(BomItem::getId,bomItemId);
+        BomItem bomItem = iBomItemService.getOne(lqw);
         if(Objects.isNull(bomItem))
-            throw new fairyCatException("500","在递归查询BOM树时发现有个Bom明细id在数据库中不存在");
+            throw new fairyCatException("500","在递归查询"+bomId+"树时发现有个BomItemId在数据库中不存在,请联系管理员");
 
-        //这条记录就相当于下面节点的根节点
         BomTreeStructVo bomTreeStructVo = BomTreeStructVo.builder()
                 .qty(bomItem.getQty())
                 .unit(bomItem.getUnit())
                 .materialId(bomItem.getMaterialId())
                 .materialCode(bomItem.getMaterialCode())
                 .materialName(bomItem.getMaterialName())
-                .id(iBomHeaderService.getBomHeaderIdByMaterialId(bomItem.getMaterialId()))
+                //根据物料id获取到它的头节点id
+                .id(iBomHeaderService.getActiveBomHeaderIdByMaterialId(bomItem.getMaterialId()))
                 .build();
 
-        //然后在bom明细表中找它的所有子节点 如果有记录的parentId存着它的id的话
-        LambdaQueryWrapper<BomItem> lqw = new LambdaQueryWrapper<>();
+
+        lqw.clear();
+        //2. 然后找这个半成品下的所有子节点
+        //递归结束条件一： 如果它是叶子节点的原材料 则没有谁的parentId会存它 下面的这个list就会判空 后面的for循环就不会执行 子节点的位置存个[]进去就可以了
+        //子节点的parentId会存放着它的id
         lqw.eq(BomItem::getBomId,bomId)
             .eq(BomItem::getParentId,bomItemId);
         List<BomItem> childNode = iBomItemService.list(lqw);
+        if(Objects.isNull(childNode)) //如果没有子节点 直接返回它前面的根节点信息就可以了
+            return bomTreeStructVo;
 
-        //然后定义一个列表来存它的子节点BOM
+        //定义一个列表来存它的子节点BOM结构
         List<BomTreeStructVo> bomTreeStructVoList = new ArrayList<>();
+        //3. 如果这个半成品有子节点 则遍历所有子节点
         for(BomItem cur: childNode){
 
-            //遍历每个子节点
-            //这个和之前的逻辑一样 查看半成品的展开状态
-
-            //原材料直接加进去
+            //3.1 先判断当前这个子节点对应的物料在物料表中是否存在
             LambdaQueryWrapper<Material> lqw_material = new LambdaQueryWrapper<>();
             lqw_material.eq(Material::getId,cur.getMaterialId());
             Material  material = getOne(lqw_material);
             if(Objects.isNull(material))
-                throw new fairyCatException("500","在物料表中未查询到该物料(在查找BOM树结构逻辑findBomTreeStructByBomItemId中)");
+                throw new fairyCatException("500","在展开树BOM结构时检测到有个节点的物料在物料表中不存在，请联系管理员(逻辑findBomTreeStructByBomItemId中)");
 
-            //如果是原材料
+            //3.2 判断这个子节点物料的类型
+            //3.2.1 如果这个物料是原材料 就直接加进去
             if(MaterialType.RAW_MATERIAL.getValue().equalsIgnoreCase(material.getMaterialType())){
                 bomTreeStructVoList.add(BomTreeStructVo.builder()
                                         .qty(cur.getQty())
@@ -388,35 +429,44 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
                                         .materialId(cur.getMaterialId())
                                         .build());
             }else{
-                //半成品的情况
-                LambdaQueryWrapper<BomHeader> lqw666 = new LambdaQueryWrapper<>();
-                lqw666.eq(BomHeader::getProductId, cur.getMaterialId())
-                        .eq(BomHeader::getIsDefault, 1);
-                BomHeader bomHeader = iBomHeaderService.getOne(lqw666);
-//                if (Objects.isNull(bomHeader)) //这里查不到就不用管了 直接忽略就行了 返回一个[]就可以了
-//                    throw new fairyCatException("500", "当前物料没有对应默认版本的BOM");
+                //3.2.2 这个节点是半成品
+                //先判断一下它的展开状态
+                //优化思路： 先全部查一遍这个物料所有状态的BOM 然后再遍历找ACTIVE的BOM
+                LambdaQueryWrapper<BomHeader> lqw_all = new LambdaQueryWrapper<>();
+                lqw_all.eq(BomHeader::getProductId, cur.getMaterialId());
+                List<BomHeader> bomHeaderList = iBomHeaderService.list(lqw_all);
+                if (Objects.isNull(bomHeaderList))
+                    throw new fairyCatException("500", "检测到有个半成品物料["+cur.getMaterialId()+"]的BOM信息不存在，请联系管理员添加");
 
-                //这里需要防止下空指针异常
-                if (bomHeader != null && BomStatus.ACTIVE.getValue().equalsIgnoreCase(bomHeader.getStatus()))
-                    bomTreeStructVoList.add(findBomTreeStructByBomItemId(bomId, cur.getId()));
-                else {
-                    //如果这个半成品不是启用状态 就保存下它的根节点 默认显示的主表中这个物料对应的那个BOM根节点
-                    LambdaQueryWrapper<BomHeader> lqw668 = new LambdaQueryWrapper<>();
-                    lqw668.eq(BomHeader::getProductId,cur.getMaterialId());
-                    List<BomHeader> bomHeaderList = iBomHeaderService.list(lqw668);
-                    BomHeader bomHeader1 = bomHeaderList.get(0);
-                    bomTreeStructVoList.add(BomTreeStructVo.builder()
-                            .qty(bomHeader1.getBaseQty())
-                            .unit(bomHeader1.getUnit())
-                            .materialId(bomHeader1.getProductId())
-                            .materialCode(bomHeader1.getProductCode())
-                            .materialName(bomHeader1.getProductName())
-                            .id(bomHeader1.getId())
-                            .build());
-//                    bomTreeStructVoList.add(bomTreeStructVo);  上次写成这种方式好像触发死循环添加的Bug了
+                BomHeader bomHeaderCP = null;
+                boolean sign = true;
+                //遍历所有的BOM状态
+                for(BomHeader curH: bomHeaderList){
+                    //找到它启用状态的BOM
+                    if(BomStatus.ACTIVE.getValue().equalsIgnoreCase(curH.getStatus())){
+                        //如果有一个启用状态的BOM(这里的bomItemId是已知的 就是前面的cur.getId)
+                        //直接递归进去继续找BOM结构就行了
+                        bomTreeStructVoList.add(findBomTreeStructByBomItemId(bomId, cur.getId()));
+                        sign = false;
+                        break;
+                    }
+                    bomHeaderCP = curH;
                 }
-            }
-        }
+                if(sign){
+                    //如果没找到一个启用状态的BOM 就把根节点展示给用户看
+                    bomTreeStructVoList.add(BomTreeStructVo.builder()
+                            .qty(bomHeaderCP.getBaseQty())
+                            .unit(bomHeaderCP.getUnit())
+                            .materialId(bomHeaderCP.getProductId())
+                            .materialCode(bomHeaderCP.getProductCode())
+                            .materialName(bomHeaderCP.getProductName())
+                            .id(iBomHeaderService.getActiveBomHeaderIdByMaterialId(bomHeaderCP.getProductId()))
+                            .build());
+                }
+            }//半成品 逻辑结束
+        } //子节点遍历 逻辑结束
+
+        //之后把结果存进来返回就可以了
         bomTreeStructVo.setChildNode(bomTreeStructVoList);
         return bomTreeStructVo;
     }
