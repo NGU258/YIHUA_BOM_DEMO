@@ -462,14 +462,14 @@ public class BomHeaderServiceImpl extends ServiceImpl<BomHeaderMapper, BomHeader
                 .eq(BomHeader::getStatus,BomStatus.ACTIVE.getValue());
         //这里由于可能调用复制接口 所以会有不止一个结果 使用getOne的话就会报异常了
         List<BomHeader> bomHeaderActiveList = list(lqw_h);
-        Long bomHeaderId = bomHeaderActiveList != null ? bomHeaderActiveList.get(0).getId(): null; //默认先拿启用状态的
+        Long bomHeaderId = bomHeaderActiveList.size()!=0 ? bomHeaderActiveList.get(0).getId(): null; //默认先拿启用状态的
         if(Objects.isNull(bomHeaderId)){
             //启用状态没有默认就拿其它状态的
             lqw_h.clear();
             lqw_h.eq(BomHeader::getProductId,materialId);
             List<BomHeader> bomHeader_draft =list(lqw_h);
             //如果还是null的话就说明这个物料是原材料  赋值为null就可以了 null就代表原材料的意思
-            bomHeaderId = bomHeader_draft != null ? bomHeader_draft.get(0).getId() : null;
+            bomHeaderId = bomHeader_draft.size()!=0 ? bomHeader_draft.get(0).getId() : null;
         }
         return bomHeaderId;
     }

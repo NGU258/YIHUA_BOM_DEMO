@@ -24,7 +24,7 @@ public interface IMaterialService extends IService<Material> {
 
     BomTreeStructVo BomTreeStructByMaterialId(Long materialId);
 
-    BomTreeStructVo findBomTreeStructByBomItemId(Long bomId, Long bomItemId);
+    BomTreeStructVo findBomTreeStructByBomItemId(Long bomId, Long bomItemId,BigDecimal multQty);
 
     Map<Long,MaterialVo> summaryMaterialTotalQty(Long bomId, Long bomItemId,  Map<Long,MaterialVo> materialVoMap, BigDecimal multQty);
 

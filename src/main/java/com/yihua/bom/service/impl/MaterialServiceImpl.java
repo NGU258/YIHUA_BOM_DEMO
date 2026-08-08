@@ -200,10 +200,10 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
         if(MaterialType.RAW_MATERIAL.getValue().equalsIgnoreCase(material.getMaterialType()))
              throw new fairyCatException("400","原材料没有对应的BOM结构");
 
-        //接着就可以去找它已启用的BOM了
+        //接着就可以去找这个物料对应已启用的BOM了 找到了说明可以展开
         //优化思路 先把物料对应的所有BOM全部都查出来 然后再用for循环遍历找那个ACTIVE状态的BOM 这样就可以不用两次请求都打到数据库了
         LambdaQueryWrapper<BomHeader> lqw_header = new LambdaQueryWrapper<>();
-        lqw_header.eq(BomHeader::getProductId,materialId);
+        lqw_header.eq(BomHeader::getProductId,materialId); //通过它的物料id找到所有的BOM
         List<BomHeader> bomHeaderList =iBomHeaderService.list(lqw_header);
         if(Objects.isNull(bomHeaderList))
             throw new fairyCatException("400","该物料没有对应的BOM结构，请联系管理员添加");
@@ -212,10 +212,10 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
         BomHeader bomHeader = null;
         //遍历物料对应的所有BOM
         for(BomHeader cur: bomHeaderList){
-            //找ACTIVE的BOM
+            //找ACTIVE的BOM  也就说明这个节点可以展开
             if(BomStatus.ACTIVE.getValue().equalsIgnoreCase(cur.getStatus())){
 
-                //接着遍历树中第二层的所有子节点 分两种情况
+                //接着遍历树中第二层的所有子节点 分两种情况 原材料的情况前面已经判断过了
                 //情况一： 传入的物料id是成品(树的根节点) 可以用bomId跟ParentId去找它树下的所有子节点
                 //情况二： 传入的物料id是半成品(物料节点的父节点) 就不能用bomId跟ParentId去找了
                 //        因为BomId的设计主要是存成品(树的根节点)的id  而不是半成品物料的id
@@ -254,7 +254,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
                     for(BomItem two: twoNode){
 
                         //接着判断当前这个子节点的物料类型
-                        //先去物料表里面找一下存不存在
+                        //检测： 先去物料表里面找一下存不存在
                         LambdaQueryWrapper<Material> lqw_m = new LambdaQueryWrapper<>();
                         lqw_m.eq(Material::getId,two.getMaterialId());
                         Material materialRaw = getOne(lqw_m);
@@ -262,10 +262,10 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
                             throw new fairyCatException("500","展开BOM树时发现异常： 有个节点的物料在物料表中并没有记录，请联系管理员");
 
                         //接着才是判断类型
-                        //如果是原材料 直接加进来就可以了
+                        //如果是原材料 直接加进来就可以了  需要累乘qty
                         if(MaterialType.RAW_MATERIAL.getValue().equalsIgnoreCase(materialRaw.getMaterialType())){
                             bomTreeStructVoList.add(BomTreeStructVo.builder()
-                                    .qty(two.getQty())
+                                    .qty(two.getQty().multiply(cur.getBaseQty())) //第二层原材料的qty * 父节点的qty
                                     .unit(two.getUnit())
                                     .materialName(two.getMaterialName())
                                     .materialCode(two.getMaterialCode())
@@ -283,29 +283,28 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
                             if(Objects.isNull(bhList))
                                 throw new fairyCatException("400","在展开BOM树时发现有个半成品物料[id: "+two.getMaterialId()+"]没对应的BOM结构，请联系管理员添加");
 
-                            BomHeader bh1 = null;
                             boolean signC = true; //防止第一遍没找到 但第二遍找到了  不好用bh1是否等于null来判断 所以需要加这个开关
                             //然后再全部遍历一遍 找启用状态的
                             for(BomHeader bh: bhList){
                                 if(BomStatus.ACTIVE.getValue().equalsIgnoreCase(bh.getStatus())){
                                     //启用状态的话就说明可以展开 调用递归方法继续递归进去找到的BOM结构
-                                    bomTreeStructVoList.add(findBomTreeStructByBomItemId(cur.getId(), two.getId()));
+                                    //下面这个递归方法刚开始的时候里面的逻辑会把它自己找出来 然后累乘的刚刚传入的这个值  这里只需要传根节点的qty就可以了
+                                    bomTreeStructVoList.add(findBomTreeStructByBomItemId(cur.getId(), two.getId(),cur.getBaseQty()));
                                     signC =  false;
                                     break;
                                 }
-                                bh1 = bh;
                             }
                             if(signC){
-                                //这里就是找到其它状态的BOM的情况 也就是未展开状态
+                                //来到这说明这个半成品没有可展开的BOM
                                 //存入这个根节点的信息返回给用户看就可以了
                                 bomTreeStructVoList.add(
                                         BomTreeStructVo.builder()
-                                                .qty(bh1.getBaseQty())
-                                                .unit(bh1.getUnit())
-                                                .materialId(bh1.getProductId())
-                                                .materialName(bh1.getProductName())
-                                                .materialCode(bh1.getProductCode())
-                                                .id(bh1.getId())
+                                                .qty(two.getQty().multiply(cur.getBaseQty()))
+                                                .unit(two.getUnit())
+                                                .materialId(two.getMaterialId())
+                                                .materialName(two.getMaterialName())
+                                                .materialCode(two.getMaterialCode())
+                                                .id(two.getId())
                                                 .build()
                                 );
                             }
@@ -321,7 +320,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
 
                 }//成品逻辑结束
                 else {
-                    //半成品逻辑 用户传入的是半成品
+                    //半成品逻辑 用户传入的物料id是半成品
                     //这里的设计就是这个半成品的BOM不管在哪颗树下 比如主板不管是在笔记本电脑上还是台式机电脑上 在查看主板BOM结构时默认都是一样的
 
                     //1. 这里就是半成品启用状态的BOM： 主表对象cur
@@ -334,7 +333,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
                     if(Objects.isNull(bomItemList)) {
                         //如果是空的，说明这个半成品的展开状态下 它是没有子节点的 直接返回根节点信息就可以了
                         return BomTreeStructVo.builder()
-                                .qty(cur.getBaseQty())
+                                .qty(cur.getBaseQty()) //这里用户传入的半成品没有展开 所以只需要展示根节点信息就行了 而不需要累乘
                                 .unit(cur.getUnit())
                                 .materialName(cur.getProductName())
                                 .materialCode(cur.getProductCode())
@@ -343,11 +342,12 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
                                 .build();
                     }
 
-                    //这里就拿第一条
+                    //如果这个半成品在不同树下出现 拿第一次出现的节点信息
+                    //所以默认用户查的这个半成品的BOM 都是同一棵树
                     BomItem bomItem = bomItemList.get(0);
 
                     //3. 递归进去查BOM结构就可以了
-                    return findBomTreeStructByBomItemId(bomItem.getBomId(),bomItem.getId());
+                    return findBomTreeStructByBomItemId(bomItem.getBomId(),bomItem.getId(),BigDecimal.ONE);
                 }//半成品逻辑结束
             }//if条件结束
 
@@ -356,7 +356,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
 
         }//遍历当前物料所有BOM结束
 
-        //来到这里就说明它没有对应启用状态的BOM
+        //来到这里就说明这个物料没有展开状态的BOM
         //这里我有三种选择 一种是直接返回null(表示没有展开，需要展开才能看到)
         //另一种情况就是抛出异常 但感觉不是很推荐
         //最后一种就是我把它的根节点信息展示出来  但子节点不展示 显示为[]就可以了
@@ -374,19 +374,21 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
 
 
     //bomId主要是判断在哪颗树下 这个方法主要还是查半成品的BOM结构 所以需要传入它的bomItemId
+    //multQty主要用于累乘计算 如果传进来的是1 则说明这个半成品就是根节点 否则就说明它是树的子结点 传入的是累乘下来的值
     @Override
-    public BomTreeStructVo findBomTreeStructByBomItemId(Long bomId,Long bomItemId) {
+    public BomTreeStructVo findBomTreeStructByBomItemId(Long bomId,Long bomItemId,BigDecimal multQty) {
 
-        //1. 先找到这个bomId树下物料所在的那条记录(这里可能递归到半成品 也可能递归到原材料) 用于保存根节点信息
+        //1. 先找到这个bomId树下物料所在的记录(这里可能递归到半成品 也可能递归到原材料) 用于保存根节点信息
         LambdaQueryWrapper<BomItem> lqw = new LambdaQueryWrapper<>();
         lqw.eq(BomItem::getBomId,bomId)
                 .eq(BomItem::getId,bomItemId);
-        BomItem bomItem = iBomItemService.getOne(lqw);
+        BomItem bomItem = iBomItemService.getOne(lqw); //刚开始传进来的是半成品的节点信息
         if(Objects.isNull(bomItem))
             throw new fairyCatException("500","在递归查询"+bomId+"树时发现有个BomItemId在数据库中不存在,请联系管理员");
 
+        multQty = bomItem.getQty().multiply( multQty); //累乘半成品父节点的qty值
         BomTreeStructVo bomTreeStructVo = BomTreeStructVo.builder()
-                .qty(bomItem.getQty())
+                .qty(multQty)
                 .unit(bomItem.getUnit())
                 .materialId(bomItem.getMaterialId())
                 .materialCode(bomItem.getMaterialCode())
@@ -408,7 +410,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
 
         //定义一个列表来存它的子节点BOM结构
         List<BomTreeStructVo> bomTreeStructVoList = new ArrayList<>();
-        //3. 如果这个半成品有子节点 则遍历所有子节点
+        //3. 遍历半成品的子节点
         for(BomItem cur: childNode){
 
             //3.1 先判断当前这个子节点对应的物料在物料表中是否存在
@@ -422,7 +424,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
             //3.2.1 如果这个物料是原材料 就直接加进去
             if(MaterialType.RAW_MATERIAL.getValue().equalsIgnoreCase(material.getMaterialType())){
                 bomTreeStructVoList.add(BomTreeStructVo.builder()
-                                        .qty(cur.getQty())
+                                        .qty(cur.getQty().multiply(multQty)) //当前子节点*它父节点的qty
                                         .unit(cur.getUnit())
                                         .materialName(cur.getMaterialName())
                                         .materialCode(cur.getMaterialCode())
@@ -430,15 +432,14 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
                                         .build());
             }else{
                 //3.2.2 这个节点是半成品
-                //先判断一下它的展开状态
-                //优化思路： 先全部查一遍这个物料所有状态的BOM 然后再遍历找ACTIVE的BOM
+                //再判断一下它有没有展开状态
+                //优化思路： 先全部查一遍这个物料所有状态的BOM 然后再遍历找ACTIVE的BOM(展开状态)
                 LambdaQueryWrapper<BomHeader> lqw_all = new LambdaQueryWrapper<>();
                 lqw_all.eq(BomHeader::getProductId, cur.getMaterialId());
                 List<BomHeader> bomHeaderList = iBomHeaderService.list(lqw_all);
                 if (Objects.isNull(bomHeaderList))
                     throw new fairyCatException("500", "检测到有个半成品物料["+cur.getMaterialId()+"]的BOM信息不存在，请联系管理员添加");
 
-                BomHeader bomHeaderCP = null;
                 boolean sign = true;
                 //遍历所有的BOM状态
                 for(BomHeader curH: bomHeaderList){
@@ -446,21 +447,20 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
                     if(BomStatus.ACTIVE.getValue().equalsIgnoreCase(curH.getStatus())){
                         //如果有一个启用状态的BOM(这里的bomItemId是已知的 就是前面的cur.getId)
                         //直接递归进去继续找BOM结构就行了
-                        bomTreeStructVoList.add(findBomTreeStructByBomItemId(bomId, cur.getId()));
+                        bomTreeStructVoList.add(findBomTreeStructByBomItemId(bomId, cur.getId(),multQty));
                         sign = false;
                         break;
                     }
-                    bomHeaderCP = curH;
                 }
                 if(sign){
                     //如果没找到一个启用状态的BOM 就把根节点展示给用户看
                     bomTreeStructVoList.add(BomTreeStructVo.builder()
-                            .qty(bomHeaderCP.getBaseQty())
-                            .unit(bomHeaderCP.getUnit())
-                            .materialId(bomHeaderCP.getProductId())
-                            .materialCode(bomHeaderCP.getProductCode())
-                            .materialName(bomHeaderCP.getProductName())
-                            .id(iBomHeaderService.getActiveBomHeaderIdByMaterialId(bomHeaderCP.getProductId()))
+                            .qty(cur.getQty().multiply(multQty)) //如果没有展开 就把之前累乘的结果乘进来
+                            .unit(cur.getUnit())
+                            .materialId(cur.getMaterialId())
+                            .materialCode(cur.getMaterialCode())
+                            .materialName(cur.getMaterialName())
+                            .id(iBomHeaderService.getActiveBomHeaderIdByMaterialId(cur.getMaterialId()))
                             .build());
                 }
             }//半成品 逻辑结束
