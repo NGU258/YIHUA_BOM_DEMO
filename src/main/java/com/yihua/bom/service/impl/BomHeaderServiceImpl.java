@@ -480,6 +480,7 @@ public class BomHeaderServiceImpl extends ServiceImpl<BomHeaderMapper, BomHeader
     // 只有当用户启用了这个BOM 之后 去查树结构的时候才能看到
     // 1.写一个生产草稿BOM的方法
     @Override
+    @Transactional
     public Map<String, Object> copyBomHeaderAndBomItemByBomId(Long bomId) {
 
         //思路： 传入一个bomId 然后把它的主表跟子表全部复制出来
@@ -565,6 +566,7 @@ public class BomHeaderServiceImpl extends ServiceImpl<BomHeaderMapper, BomHeader
 
     //传入一个物料id 返回它草稿状态的BOMId 如果已经有草稿状态就直接返回  如果没有就先创建一个草稿状态的BOM再返回它的ID
     @Override
+    @Transactional
     public Long returnDraftBomIdByBomMaterialId(Long materialId) {
 
         //整体思路
@@ -624,6 +626,7 @@ public class BomHeaderServiceImpl extends ServiceImpl<BomHeaderMapper, BomHeader
     }
 
     @Override
+    @Transactional
     public Long returnDraftBomByBomHeader(BomHeader bomHeader) {
         //复制成草稿状态的BOM思路 主要是复制BOM主表跟子表
 
