@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yihua.bom.Mapper.BomHeaderMapper;
 import com.yihua.bom.constants.Enum.bom.BomStatus;
 import com.yihua.bom.constants.Enum.bom.BomType;
+import com.yihua.bom.constants.Enum.material.MaterialType;
 import com.yihua.bom.dto.BomHeaderDTO;
 import com.yihua.bom.entity.BomHeader;
 import com.yihua.bom.entity.BomItem;
@@ -229,9 +230,9 @@ public class BomHeaderServiceImpl extends ServiceImpl<BomHeaderMapper, BomHeader
 
         //1. 先拿出要被更新的主表记录
         BomHeader bomHeader = getById(bomId);
-        BeanUtils.copyProperties(b,bomHeader);
         if(Objects.isNull(bomHeader))
             throw new fairyCatException("500","数据库Bom主表中未查到该记录["+bomId+"]");
+        BeanUtils.copyProperties(b,bomHeader);
 
         if(!Objects.isNull(b.getProductId())){
             //如果用户更改了物料id 则回填相应的值
@@ -243,6 +244,8 @@ public class BomHeaderServiceImpl extends ServiceImpl<BomHeaderMapper, BomHeader
         }
 
         //2. 把物料对应所有的BOM状态都查出来
+        //这里做了版本功能控制后 这里的BomId其实就已经失效了 只是用来查它所在的记录
+        //后面的操作都会先操作这个物料对应草稿状态的BOM 而不是BomId所在的BOM了
         lqw.clear();
         lqw.eq(BomHeader::getProductId,bomHeader.getProductId());
         List<BomHeader> bomHeaderList = list(lqw);
@@ -457,8 +460,9 @@ public class BomHeaderServiceImpl extends ServiceImpl<BomHeaderMapper, BomHeader
         LambdaQueryWrapper<BomHeader> lqw_h = new LambdaQueryWrapper<>();
         lqw_h.eq(BomHeader::getProductId,materialId)
                 .eq(BomHeader::getStatus,BomStatus.ACTIVE.getValue());
-        BomHeader bomHeader_active = getOne(lqw_h);
-        Long bomHeaderId = bomHeader_active != null ? bomHeader_active.getId(): null; //默认先拿启用状态的
+        //这里由于可能调用复制接口 所以会有不止一个结果 使用getOne的话就会报异常了
+        List<BomHeader> bomHeaderActiveList = list(lqw_h);
+        Long bomHeaderId = bomHeaderActiveList != null ? bomHeaderActiveList.get(0).getId(): null; //默认先拿启用状态的
         if(Objects.isNull(bomHeaderId)){
             //启用状态没有默认就拿其它状态的
             lqw_h.clear();
@@ -478,111 +482,85 @@ public class BomHeaderServiceImpl extends ServiceImpl<BomHeaderMapper, BomHeader
     @Override
     public Map<String, Object> copyBomHeaderAndBomItemByBomId(Long bomId) {
 
+        //思路： 传入一个bomId 然后把它的主表跟子表全部复制出来
 
-        Map<String,Object> hash = new HashMap<>();
-        hash.put("草稿状态Id",returnDraftBomIdByBomMaterialId(bomId));
+        //保存复制后的结果
+        Map<String,Object> resMap = new HashMap<>();
 
-        return hash;
-//        //复制成功后再返回给用户看
-//        Map<String,Object> hashMap = new HashMap<>();
-//        //思路： 传入一个bomId 然后把它的主表跟子表全部复制出来
-//
-//        //复制主表需要看的字段如下(其它的直接正常拷贝就可以了)
-//        //bomCode 版本数字+1
-//        //bomName 版本数字+1
-//        //bomVersion 版本数字+1
-//        //status 状态变成草稿
-//        //isDefault 默认启用设置成0
-//        BomHeader bomHeader = getById(bomId);
-//        if(Objects.isNull(bomHeader))
-//            throw new fairyCatException("400","填入了一个错误的bomId,该bomId在Bom主表中并不存在");
-//
-//        //先复制下主表
-//        BomHeader bomHeader_copy = new BomHeader();
-//        BeanUtils.copyProperties(bomHeader,bomHeader_copy);
-//
-//        //处理版本数字
-//        //Pattern.compile(".*?-(0-9+)")
-//        //在正则表达式中 \d表示匹配任意一个数字 等价[0-9]
-//        //Java中String的format方法 等价于C中的printf方法 语法几乎一样
-//        //处理BomCode
-//        String opStr = bomHeader_copy.getBomCode(); //BOM-A-0001
-//
-//            Matcher matcher = Pattern.compile("(\\d+)$").matcher(opStr);
-//            String opStrResult = "";
-//            if(matcher.find())
-//                opStrResult = matcher.group(1);//这里就变成0001了
-//            //再转成数字 在转化之前需要判空字符串 因为group方法如果没匹配到返回的就是空字符串
-//            if(opStrResult.equals(""))
-//                  opStr = bomHeader_copy.getBomCode();//如果没有匹配成功 恢复原值
-//            else {
-//                int newVersionNum = Integer.parseInt(opStrResult) + 1; //版本数字+1
-//
-//                //先将拼接的这个版本数字2 转换成0002的形式
-//                String replaceStr = String.format("%04d", newVersionNum);
-//                //接着把原字符串中的000X版本字符串替换成这个新的
-//                opStr = opStr.replace(opStrResult,replaceStr);
-//            }
-//        bomHeader_copy.setBomCode(opStr);
-//            //处理BomName 示例： BOM-成品A-v1
-//            String bomName = bomHeader_copy.getBomName();
-//            //String类的replaceFirst只会替换掉第一个满足条件的
-//            //String类的replace有两个重载  一个是替换掉字符 另一个是替换掉字符串
-//            //从java9开始Matcher类的replaceAll支持一个函数 这个函数可以是Lambda表达式  而当前的java8是不支持这个Lambda写法的
-//            //Lambda表达式中的参数名可自定义 它代表捕获到的这个对象
-//            //用.group()方法来获取到匹配的值
-//            //在Matcher类的replaceAll这个函数中满足条件就会来调用一次Labmda表达式 然后执行相关的逻辑
-//            //记得返回修改后的结果 这样才会把前面匹配的内容替换成它
-//            Matcher matchFairyCat = Pattern.compile("(\\d+)$").matcher(bomName);
-//            String processStr = "";
-//            if(matchFairyCat.find())
-//                 processStr = matchFairyCat.group(1); //取到数字1
-//            //判断截取后的字符串
-//            if(processStr.equals(""))
-//                bomName = bomHeader_copy.getBomName();
-//            else{
-//                int versionNum = Integer.parseInt(processStr);
-//                int newVersionNum = versionNum + 1;
-//
-//                bomName = bomName.replace("v"+versionNum,"v"+newVersionNum);
-//            }
-////        bomName = matchFairyCat.replaceAll();
-//        bomHeader_copy.setBomName(bomName);
-//
-//        //bomVersion
-//        String bomVersion = bomHeader_copy.getBomVersion(); //V1
-//        //这里就直接截取后面的数字就可以了
-//            int newVersionNum = Integer.parseInt(bomVersion.substring(1))+1;
-//
-//            bomVersion = "V"+newVersionNum ;
-//
-//        bomHeader_copy.setBomVersion(bomVersion);
-//
-//        //处理状态跟默认启用
-//        bomHeader_copy.setStatus(BomStatus.DRAFT.getValue());
-//        bomHeader_copy.setIsDefault(0);
-//
-//        //这里也会把id同样复制过去  这样的话直接插入到数据库中会触发主键索引的唯一性机制
-//        //所以需要将id置空 这里置空的话Mybatis-Plus会自己生成一个并回推回来
-//        bomHeader_copy.setId(null);
-//
-//        Boolean  result = save(bomHeader_copy);
-//        if(!result)
-//            throw new fairyCatException("500","保存主表失败");
-//
-////        System.out.println("BomId: "+bomHeader_copy.getId());
-//
-//        //复制子表需要更新的字段
-//        //bomId 它是连接着根节点的 现在根节点变化了 它也得变化一下
-//        //parentId这里也需要维护一下 这里也是复制明细这里最难的地方 思路如下
-//            //1. 先直接复制所有明细生成对应的新id
-//            //2. 然后再将旧id与新id做个映射
-//            //3. 把原来的parentId对应的旧id替换成新id
-//
-//        hashMap.put("bomHeader:",bomHeader_copy);
-//
-//        return hashMap;
+        //1.先复制主表
+        BomHeader bomHeader = getById(bomId);
+        if(Objects.isNull(bomHeader))
+            throw new fairyCatException("400","填入的BomId在主表中不存在或已被删除");
 
+        //通过Mybatis-Plus的机制来生成一个新的id
+        bomHeader.setId(null);
+
+        //然后再插入进去就可以达成复制的效果了
+        Boolean result = save(bomHeader);
+        if(!result)
+            throw new fairyCatException("500","复制草稿主表失败");
+
+        resMap.put("bomHeaderCopy",bomHeader);
+        //2.先判断下物料类型
+        LambdaQueryWrapper<Material> lqw_m = new LambdaQueryWrapper<>();
+        lqw_m.eq(Material::getId,bomHeader.getProductId());
+        Material material = iMaterialService.getOne(lqw_m);
+        if(Objects.isNull(material))
+            throw new fairyCatException("500","检测到该BOM对应的物料【物料id: "+bomHeader.getProductId()+"】在物料表中不存在");
+        //如果是半成品 则只复制主表
+        //如果是成品 才需要把子表复制一下
+        List<BomItem> bomItemCp = new ArrayList<>();
+        if(MaterialType.PRODUCT.getValue().equalsIgnoreCase(material.getMaterialType())){
+            // 3.复制子表逻辑
+
+            //映射表 旧id：新id
+            Map<Long,Long> hash = new HashMap<>();
+
+            //先找原来旧的子表
+            LambdaQueryWrapper<BomItem> lqw_item = new LambdaQueryWrapper<>();
+            lqw_item.eq(BomItem::getBomId,bomId);
+            List<BomItem> bomItemList = iBomItemService.list(lqw_item);
+            if(!Objects.isNull(bomItemList)){
+                //如果子表不是空的才需要复制
+                for(BomItem cur : bomItemList){
+
+                    BomItem curCp = new BomItem();
+                    BeanUtils.copyProperties(cur,curCp);
+                    curCp.setId(null);
+                    curCp.setBomId(bomHeader.getId());
+
+                    Boolean r = iBomItemService.save(curCp);
+
+                    if(!r)
+                        throw new fairyCatException("500","复制子表出错");
+
+                    hash.put(cur.getId(),curCp.getId());
+                }
+
+                lqw_item.clear();
+
+                //把原来的parentId还原
+                //找新Bom的子表
+                lqw_item.eq(BomItem::getBomId,bomHeader.getId());
+                List<BomItem> bomItems = iBomItemService.list(lqw_item);
+                if(Objects.isNull(bomItems))
+                    throw new fairyCatException("500","子表插入异常，请联系程序员");
+
+                for(BomItem curi: bomItems){
+
+                    if(curi.getParentId().longValue() != 0l)
+                        curi.setParentId(hash.get(curi.getParentId()));
+                     Boolean rBomItem = iBomItemService.saveOrUpdate(curi);
+                     if(!rBomItem)
+                         throw new fairyCatException("500","在复制接口逻辑中更新子表时出错");
+                     bomItemCp.add(curi);
+                }
+
+            }
+        }
+        resMap.put("bomItemCopy:",bomItemCp);
+
+        return resMap;
     }
 
     //传入一个物料id 返回它草稿状态的BOMId 如果已经有草稿状态就直接返回  如果没有就先创建一个草稿状态的BOM再返回它的ID
