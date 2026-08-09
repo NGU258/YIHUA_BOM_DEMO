@@ -159,21 +159,24 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
     @Transactional
     public Material deleteMaterialById(Long materialId) {
         //逻辑： 返回的时候给用户显示已删除的那个物料信息
+
+        //1.判断物料是否存在
         Material material = getById(materialId);
-        //这里如果用户重复执行删除操作的话提示相关的信息
         if(Objects.isNull(material))
              throw new fairyCatException("500","当前要删除的物料在数据库中并不存在");
 
+        //2.判断物料是否被主表引用
         LambdaQueryWrapper<BomHeader> lqw1 = new LambdaQueryWrapper<>();
         lqw1.eq(BomHeader::getProductId,materialId);
-        BomHeader bomHeader = iBomHeaderService.getOne(lqw1);
-        if(!Objects.isNull(bomHeader))
+        List<BomHeader> bomHeaderList = iBomHeaderService.list(lqw1);
+        if(bomHeaderList.size()!=0)
             throw new fairyCatException("400","该物料已经被BOM主表引用了，无法删除");
 
+        //3.判断物料是否被子表引用
         LambdaQueryWrapper<BomItem> lqw2 = new LambdaQueryWrapper<>();
         lqw2.eq(BomItem::getMaterialId,materialId);
-        BomItem bomItem = iBomItemService.getOne(lqw2);
-        if(!Objects.isNull(bomItem))
+        List<BomItem> bomItemList = iBomItemService.list(lqw2);
+        if(bomItemList.size()!=0)
             throw new fairyCatException("400","该物料已经被BOM子表引用了，无法删除");
 
         Integer result = baseMapper.deleteById(materialId);
