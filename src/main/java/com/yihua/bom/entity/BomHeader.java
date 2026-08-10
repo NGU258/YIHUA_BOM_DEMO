@@ -16,6 +16,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 public class BomHeader {
+    //在调用saveOrUpdate时由于这里指定的是IdType.AUTO 也就是主键自增
+    //我如果手动指定那个要保存进去的对象id值是3 则Mybatis-Plus会自动忽略掉我设置的这个3 始终让数据库自增 设置成那个上次记录最大值id+1
     @TableId(type = IdType.AUTO)
     private Long id;
 

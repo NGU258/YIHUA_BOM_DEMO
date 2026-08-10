@@ -5,9 +5,12 @@ server:
 logging:
   pattern:
     console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){cyan} %clr(%-5p){green} %clr(${PID:- }){magenta} --- [%10.10t] %clr(%logger{36}){pink} : %msg%n"
-  level: #这里可以通过提升日志级别解决Mybatis-Plus主键自增带来的问题 比如Header的id是null 然后我设置一个值3 但Mybatis-Plus会自动把我刚刚赋值的这个3覆盖掉 按照它的逻辑主键自增(最大id+1)自动赋值 于是就不是更新操作 而是变成插入操作了
-    org.apache.ibatis: debug
-    com.yihua.bom: debug
+  #这里可以通过提升日志级别来分析Mybatis-Plus主键自增带来的问题 比如Header的id是null 然后我手动设置一个值3 但调试的时候发现Mybatis-Plus会自动把我刚刚赋值的这个3覆盖掉 按照它的逻辑主键自增(最大id+1)自动赋值 于是就不是更新操作 而是变成插入操作了
+ #日志级别off(啥都不打)->error(只打印报错信息)->warn(在前一级别信息的基础上+警告的信息)->info(在前一级别信息的基础上+一般信息)->debug(在前一级别信息的基础上+调试细节，开发时用)->trace(打印所有细节)
+  level:  #控制日志级别
+    #因为Mybatis-Plus只是Mybatis的增强版(自动生成CRUD) 但底层执行Sql还是Mybatis的类在执行的
+    org.apache.ibatis: debug # 所以这里需要写上Mybatis日志类所在的包路径 打印它执行的每条SQL
+    com.yihua.bom: debug #自己的包 打印出自己写的所有日志信息
 
 #数据库连接信息
 #useUnicode=true	使用Unicode编码 防止中文乱码
