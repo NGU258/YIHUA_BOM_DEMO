@@ -1,16 +1,27 @@
 server:
   port: 8066
 
-#自定义控制台日志格式输出以及字体颜色
+#自定义控制台日志格式输出及字体颜色
 logging:
   pattern:
-    console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){cyan} %clr(%-5p){green} %clr(${PID:- }){magenta} --- [%10.10t] %clr(%logger{36}){pink} : %msg%n"
-  #这里可以通过提升日志级别来分析Mybatis-Plus主键自增带来的问题 比如Header的id是null 然后我手动设置一个值3 但调试的时候发现Mybatis-Plus会自动把我刚刚赋值的这个3覆盖掉 按照它的逻辑主键自增(最大id+1)自动赋值 于是就不是更新操作 而是变成插入操作了
- #日志级别off(啥都不打)->error(只打印报错信息)->warn(在前一级别信息的基础上+警告的信息)->info(在前一级别信息的基础上+一般信息)->debug(在前一级别信息的基础上+调试细节，开发时用)->trace(打印所有细节)
+    # SpringBoot扩展语法： %clr(受操作的文本){自定义颜色}
+    # 其中clr是color的缩写 {cyan}表示设置成青色 {magenta}表示设置成紫红色
+    # %d{yyyy-MM-dd HH:mm:ss.SSS} 中的%d指的日期时间 {}里面的是格式，可自定义，HH:mm:ss.SSS格式对应的就是时:分:秒.毫秒
+    # %p代表日志级别 %-5p表示输出日志级别信息，格式是总宽度占5个字符、不足补空格，负号表示左对齐的意思
+    # ${PID：- } 表示当前JVM进程的PID(进程ID)
+    # %10.10t 其中%t代表当前线程名 前面的10代表最小宽度，不足补空格 后面的10代表最大宽度，超出部分会被删掉 用于日志输出格式的美观对齐
+    # logger{36} 表示输出logger名称(通常是类的全限定名) {36}表示最大显示字符，超过就会智能压缩(保留首尾，中间会被简化成缩写)
+    # %msg 表示日志正文内容  %n表示换行符
+    #其它的都是字面量，原样输出
+    #总结一下输出： 时间 日志级别 进程ID 进程名 全限定名 日志正文
+    console: "%clr(%d{yyyy年MM月dd日 HH时mm分ss秒}){cyan} %clr(%-5p){green} %clr(${PID:- }){magenta}【%10.10t】%clr(%logger{36}){pink}: %msg%n"
+
+ #这里可以通过提升日志级别来分析Mybatis-Plus主键自增带来的问题 比如Header的id是null 然后我手动设置一个值3 但调试的时候发现Mybatis-Plus会自动把我刚刚赋值的这个3覆盖掉 按照它的逻辑主键自增(最大id+1)自动赋值 于是就不是更新操作 而是变成插入操作了
+ #日志级别off(啥都不打)->error(只打印报错信息)->warn(在前一级别信息的基础上+警告的信息)->info(在前一级别信息的基础上+一般信息)->debug(在前一级别信息的基础上+调试细节，开发时用)->trace(打印所有细节,在控制台还能看到所有满足条件的记录对应的字段值)
   level:  #控制日志级别
-    #因为Mybatis-Plus只是Mybatis的增强版(自动生成CRUD) 但底层执行Sql还是Mybatis的类在执行的
+    #因为Mybatis-Plus只是Mybatis的增强版(自动生成CRUD) 但底层执行Sql还是Mybatis的类在执行的 Mybatis是用java写的 它的前身其实是ibatis
     org.apache.ibatis: debug # 所以这里需要写上Mybatis日志类所在的包路径 打印它执行的每条SQL
-    com.yihua.bom: debug #自己的包 打印出自己写的所有日志信息
+    com.yihua.bom: trace #自己的包 打印出自己写的所有日志信息
 
 #数据库连接信息
 #useUnicode=true	使用Unicode编码 防止中文乱码
@@ -22,3 +33,4 @@ spring:
     username: root
     password: lyq20041230
     driver-class-name: com.mysql.cj.jdbc.Driver
+
