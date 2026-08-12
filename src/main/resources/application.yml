@@ -30,7 +30,11 @@ logging:
 spring:
   datasource:
     url: jdbc:mysql://localhost:3306/bom_coding_handler?useUnicode=true&characterEncoding=utf8&&useSSL=false
-    username: root
-    password: lyq20041230
+    #${key:defaultValue}的用法
+    #key是个变量名 可以是全大写+下划线的环境变量名(如BOM_USERNAME),也可以是小写.如(server.port 里面的写法是server: port:)这种引入配置文件内部变量的形式
+    #defaultValue是默认值的意思 如果前面的key不存在 则会使用这个默认值来代替
+    #defaultValue这里可以进行嵌套写法 如： (${BOM_TEST:server.port:8088}}) 如果没有BOM_TEST也没有server.port这两个变量的话则会默认使用8088
+    username: ${BOM_USERNAME:root}
+    password: ${BOM_PASSWORD:lyq20041230}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
