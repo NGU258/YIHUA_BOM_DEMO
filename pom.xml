@@ -9,7 +9,7 @@
 <!-- 这个是我当前项目的GAV坐标(类似于Maven项目中的身份证) 别人依赖我这个项目时就会用到我的GAV-->
     <groupId>com.yihua</groupId> <!--公司/组织名 -->
     <artifactId>BOM_Demo</artifactId> <!--项目名-->
-    <version>1.0-fairyCat-SNAPSHOT</version><!--版本号 SNAPSHOT表示随时可能会变的快照版本-->
+    <version>1.0-fairyCat-SNAPSHOT</version><!--版本号 SNAPSHOT表示随时可能会变的快照版本 SNAPSHOT必须全大写-->
 
     <packaging>jar</packaging> <!-- 打包的时候打jar包后面就可以用java -jar命令直接跑起来喵~ -->
 
@@ -88,6 +88,78 @@
         </dependency>
 
     </dependencies>
+
+<!--    使用<distributionManagement>标签将当前项目对应的jar包上传到私服Nexus中去-->
+<!--    distributionManagement翻译过来就是分发管理的意思 它告诉Maven当执行mvn deploy命令的时候应该把打好的jar包上传到哪个地方-->
+<!--    这里配置好后还需要到Maven的配置文件settings.xml中再配置一下 位置行号： 135-->
+<!--    Maven会根据当前项目<Version>标签中包不包含SNAPSHOT来判断应该放到下面的哪个私有仓库中去-->
+<!--    如果包含SNAPSHOT(代表随时会变的快照版本，允许重复覆盖上传)，则会上传到下面的快照仓库snapshotRepository中-->
+<!--    如果不包含SNAPSHOT(最终发布版本，一旦上传就不允许再覆盖了)，则会上传到下面的正式版本repository中-->
+
+<!--    注意在Maven的日常维护中 只需要使用生命周期中的命令就可以了 插件中的命令是给高级用户提供的-->
+<!--    它们之间的关系就是 生命周期是一个接口 而插件中的命令是具体的实现类 -->
+<!--    调用这个接口的时候它会自动去找合适的那个实现类 而如果自己是直接单独调用的插件中的命令很容易报错 -->
+<!--    所以下次部署上去先去Maven中的生命周期中执行以下命令： clean->compile->package->deploy就好了-->
+    <distributionManagement>
+
+<!--        快照仓库-->
+        <snapshotRepository>
+<!--            id标签是仓库的唯一标识，要跟settings.xml配置中server标签里面的id对应上(用于登录认证)-->
+            <id>nexus-snapshots-fairyCat</id>
+<!--            name标签主要是一个描述 给人看的 不影响功能-->
+            <name>存放当前项目的快照版本</name>
+<!--            url标签主要对应着仓库的实际HTTP访问地址-->
+            <url>http://localhost:8088/repository/maven-snapshots/</url>
+        </snapshotRepository>
+
+<!--        正式仓库-->
+        <repository>
+            <id>nexus-releases-fairyCat</id>
+            <name>存放项目的所有正式版本</name>
+            <url>http://localhost:8088/repository/maven-releases/</url>
+        </repository>
+<!--        这样别人在pom.xml中引入我项目的GAV坐标后再执行mvn install命令的时候它就会去私服上面下载我上传的jar包了-->
+<!--        而我执行mvn deploy命令就会把当前项目的jar包上传到本地Nexus私服中去-->
+    </distributionManagement>
+
+<!--    使用repositories标签从Nexus远程仓库中下载对应的依赖-->
+<!--    <repositories>标签告诉Maven从哪里下载别人的依赖-->
+
+    <!--配置Nexus远程仓库 后面Maven在下载依赖的时候会自动去Nexus远程仓库中找-->
+    <repositories>
+            <repository>
+<!--            <id>标签里面的值是唯一的，但名称可自定义，尽量命名的语义清晰一点
+                它主要是一个登录凭证的key Maven会通过这个key去settings.xml文件中找这个key对应的value(对应的用户名跟密码) 也就是在<server>标签的位置-->
+<!--            上传jar的时候是需要凭证的 所以需要指定Nexus对应的用户名跟密码-->
+<!--            但下载的时候一般是不需要的 Nexus是允许匿名访问的 所以这里的id也可以不用去Settings.xml中配置server对应的用户名跟密码
+                但如果管理员取消勾选了允许匿名访问的话 那就必须得认证了 这个时候就得去Settings.xml中配置server，配置对应的用户名跟密码了 -->
+                <id>downloadAllRepositoryFromRepositoryGroup</id>
+<!--            <name>标签 用于描述给人看的文字内容-->
+                <name>Nexus的仓库组，里面有所有仓库对应的依赖，比如代理仓库、宿主仓库等</name>
+<!--            <url>标签表示下载地址 从哪里下载对应的依赖
+                这里设置的是仓库组的地址
+                仓库组里面不会存依赖(数据)，它就像是一个前台，如果别人来仓库组拉依赖的话
+                仓库组它会去它下面的所有仓库成员(默认会添加快照、正式、代理中央仓库这些成员)找一遍，直到找到那个依赖，如果没有的话才会通过代理仓库去中央仓库找
+                所以这里并不需要担心配置的是仓库组的URL后以为仓库组中没有依赖别人就拉取不到自己上传到快照版或正式版中的jar了
+                如果在settings.xml文件中配置了镜像mirror  则Maven所有对中央仓库的请求都会被拦截到来访问那个镜像所在的地址-->
+                <url>http://localhost:8088/repository/maven-public/</url>
+<!--            release标签跟snapshots标签对应着正式版与快照版  这里配合enabled标签就相当于一个控制别人能否从这两个仓库下载的一个开关
+                下面这两个版本的仓库对应的enabled都是true 则表示当前项目是能从它们那里下载对应的依赖的-->
+                <releases>
+<!--                <enabled>标签如果是true则表示允许从Nexus里面拉取对应的依赖 如果是false的话则表示就算Nexus远程仓库中有这个依赖 但也不允许拉取下来-->
+                    <enabled>true</enabled>
+                </releases>
+                <snapshots>
+                    <enabled>true</enabled>
+                    <!-- <updatePolicy>标签的作用: 当执行mvn构建命令解析依赖时且本地已有缓存的情况下 要不要再去远程仓库确认一下有没有最新版本，如果有的话就拉取下来，覆盖掉原来的旧版本，控制的是多久确认一次的频率
+                     参数： always: 每次构建时都会去远程仓库检查一遍(间隔时间0秒)
+                     daily: 默认值，不写就这个，隔24小时后才会检查一遍 如果当前距离上次在远程仓库检查的时间点没超过24小时 则在构建的时候不会去远程仓库上找最新版本
+                     interval: 30  表示距上次检查时间点相隔30分钟后才会检查一次
+                     never: 从不检查，这样就会一直用快照原来的旧版本 如果出现同一版本 但里面的版本内容不同 不主动去远程仓库上拉取最新版本内容的话出了Bug去查的时候还是查的原来旧版本逻辑-->
+                    <updatePolicy>always</updatePolicy>
+                </snapshots>
+            </repository>
+    </repositories>
 
     <build>
         <plugins>
