@@ -29,7 +29,9 @@ public class BomHeaderController {
     }
 
     @GetMapping
-    public Result<IPage<BomHeader>> listBomHeader(@RequestParam(defaultValue = "1")  Long curPage,
+    public Result<IPage<BomHeader>> listBomHeader(
+                                                  //这里写0或1的效果是一样的 最后生成的SQL语句都是limit 10;
+                                                  @RequestParam(defaultValue = "0")  Long curPage,
                                                   @RequestParam(defaultValue = "10") Long curPageNum,
                                                   @RequestParam String keyword){
             IPage<BomHeader> result  = iBomHeaderService.listBomHeader(curPage,curPageNum,keyword);
