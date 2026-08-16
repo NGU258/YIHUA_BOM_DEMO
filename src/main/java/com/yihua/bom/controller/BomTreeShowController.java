@@ -32,7 +32,7 @@ public class BomTreeShowController {
     }
 
     //统计生产指定物料(成品或半成品)需要多少原材料
-    //这里用set来解决 List会存重复对象的问题 但又得保证这个对象去重后它们里面的qty值是它们相加的总和
+    //这里用map来解决 List会存重复对象的问题 同时保证这个对象去重后它们里面的qty值是它们相加的总和
     @GetMapping("/{materialId}/summary")
     public Result<List<MaterialVo>> summaryTotalQtyByMaterialId(@PathVariable Long materialId){
         List<MaterialVo> materialList = iMaterialService.summaryToTalQtyByMaterialId(materialId);

@@ -4,6 +4,7 @@ import com.yihua.bom.entity.FairyCat;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.ArrayList;
@@ -64,5 +65,19 @@ public class TestAll {
         //FairyCat  cat = new FairyCat(); 不能用这种方法创建对象 因为它是不受spring管控的
         System.out.println(cat.getName()); //输出root
         System.out.println(cat.toString());//输出FairyCat(name=root, age=null)
+    }
+
+    //测试在测试类中使用构造器注入的方式
+    private final FairyCat fairyCat;
+
+    //注意测试类的实例是由JUnit5来创建的 而不是由Spring来创建的
+    //而且JUnit5默认不会去解析Spring的构造器参数 不过@Autowired字段注入不受影响
+    //如果想保留这种构造器注入的形式 可以在构造器参数的前面加@Autowired注解来进行注入
+    public TestAll(@Autowired FairyCat fairyCat){
+        this.fairyCat = fairyCat;
+    }
+    @Test
+    public void testValueAnnotation(){
+        System.out.println(fairyCat);
     }
 }
