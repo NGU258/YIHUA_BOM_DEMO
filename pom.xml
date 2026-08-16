@@ -54,7 +54,8 @@
         </dependency>
 
 <!--        这个包主要提供@Data注解  通过它可以自动生成对应的get/set方法、并重写toString、hashCode、equals等方法-->
-<!--        这里面还有个好玩的注解： @Builder 可以达到建造者的效果 -->
+<!--        这里面还有个好玩的注解： @Builder 可以达到建造者的效果
+            这里面还有个好用的日志注解: @Slf4j 它是一个日志门面 整合了所有的日志框架 通过日志桥接器来实现 要想使用的话就直接在需要使用日志的类上加上这个注解@Slf4j 然后调用内置对象log就可以了 比如：log.debug("调试信息")-->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -84,6 +85,37 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope> <!-- 只需要在测试的时候用 在编译跟打包的时候不用 -->
+        </dependency>
+
+<!--    引入SpringBoot热部署的依赖-->
+<!--    当开启了SpringBoot全局热部署后 自己在代码或配置文件中做了相关修改后 不需要重启项目便可自动生效 这样可以大大的提升开发效率
+        如果生效了 日志中会输出o.s.b.d.a.OptionalLiveReloadServer: LiveReload server is running on port 35729
+        经过实践 对于代码文件而言 如果做了更改之后 得重新构建(快捷键Ctrl+F9)项目生成新的class才会触发热部署
+                    对比启动时间(同等条件下，代码部分只修改了一个字符)
+                        重启项目耗时： 2.248秒
+                   构建触发热部署耗时： 0.253秒
+               对于配置文件而言 如果做了更改之后按保存(快捷键Ctrl+s)就会立马生效 控制台那里可以直观的看到输出日志信息开始发生变化了
+
+               如果想保存代码后让Idea实现自动构建(这样就不用手动按Ctrl+F9了)，只需要打开以下两个地方
+               Ctrl+Alt+S打开设置
+
+                        英文版：点击Build、Execution、Deployment → Compiler -> 勾选 ✅Build project automatically
+                        中文版：点击构建、执行、部署 -> 编译器 -> 勾选 ✅自动构建项目
+
+                        英文版：点击 Advanced Settings（或 Tools） ->勾选  ✅Allow auto-make to start even if developed application is currently running
+                        中文版：点击 高级设置 -> 在搜索框中输入"启动"查找 ->勾选 ✅即使开发的应用程序当前正在运行，也允许自动 make启动
+
+               通过实践发现配置好上面的参数选项后
+                在修改代码并保存时
+                    从被Idea检测执行自动构建到被devtools检测到class文件内容变动开始触发热部署的时间间隔
+                        整个过程需要等个5秒左右 如果急的话推荐手动构建直接触发
+
+        理论部分： devtools工具实现热部署的本质其实仍是重启 只是做了相关的优化让重启的速度很快罢了
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <optional>true</optional>
         </dependency>
 
     </dependencies>

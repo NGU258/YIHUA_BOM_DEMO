@@ -1,5 +1,5 @@
 server:
-  port: 8066
+  port: 8088
 
 #自定义控制台日志格式输出及字体颜色
 logging:
@@ -17,11 +17,16 @@ logging:
     console: "%clr(%d{yyyy年MM月dd日 HH时mm分ss秒}){cyan} %clr(%-5p){green} %clr(${PID:- }){magenta}【%10.10t】%clr(%logger{36}){pink}: %msg%n"
 
  #这里可以通过提升日志级别来分析Mybatis-Plus主键自增带来的问题 比如Header的id是null 然后我手动设置一个值3 但调试的时候发现Mybatis-Plus会自动把我刚刚赋值的这个3覆盖掉 按照它的逻辑主键自增(最大id+1)自动赋值 于是就不是更新操作 而是变成插入操作了
- #日志级别off(啥都不打)->error(只打印报错信息)->warn(在前一级别信息的基础上+警告的信息)->info(在前一级别信息的基础上+一般信息)->debug(在前一级别信息的基础上+调试细节，开发时用)->trace(打印所有细节,在控制台还能看到所有满足条件的记录对应的字段值)
+ #日志级别error(只打印报错信息)->warn(在前一级别信息的基础上+警告的信息)->info(SpringBoot默认级别，在前一级别信息的基础上+一般信息)->debug(在前一级别信息的基础上+调试细节，开发时用)->trace(打印所有细节,在控制台还能看到所有满足条件的记录对应的字段值)
   level:  #控制日志级别
     #因为Mybatis-Plus只是Mybatis的增强版(自动生成CRUD) 但底层执行Sql还是Mybatis的类在执行的 Mybatis是用java写的 它的前身其实是ibatis
+    #这里可以写类的全限定名也可以写包路径
+    #还有一种特殊情况就是直接写成root 这样的话是对当前整个项目（全局范围）进行指定日志级别的控制 但不太推荐 信息量比较杂乱
     org.apache.ibatis: debug # 所以这里需要写上Mybatis日志类所在的包路径 打印它执行的每条SQL
-    com.yihua.bom: trace #自己的包 打印出自己写的所有日志信息
+    #自己的包 打印出自己写的所有日志信息
+    #只有自己调用的日志级别方法小于等于当前配置文件中的日志级别 对应的调试信息才会打印出来 反之则不会
+    #SpringBoot的默认日志级别是info
+    com.yihua.bom: trace
 
 #数据库连接信息
 #useUnicode=true	使用Unicode编码 防止中文乱码

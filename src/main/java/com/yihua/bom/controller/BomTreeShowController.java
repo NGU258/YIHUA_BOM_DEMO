@@ -4,6 +4,7 @@ import com.yihua.bom.service.IMaterialService;
 import com.yihua.bom.vo.BomTreeStructVo;
 import com.yihua.bom.vo.MaterialVo;
 import com.yihua.bom.vo.Result;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,6 +14,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/boms/material")
+@Slf4j
 public class BomTreeShowController {
 
     private final IMaterialService iMaterialService;
@@ -23,6 +25,8 @@ public class BomTreeShowController {
 
     @GetMapping("/{materialId}/tree")
     public Result<BomTreeStructVo> BomTreeStructByMaterialId(@PathVariable Long materialId){
+
+            log.debug("测试热部署，12345，上山打老虎668");
             BomTreeStructVo bomTreeStructVo = iMaterialService.BomTreeStructByMaterialId(materialId);
             return Result.success("BOM树查询成功",bomTreeStructVo);
     }
