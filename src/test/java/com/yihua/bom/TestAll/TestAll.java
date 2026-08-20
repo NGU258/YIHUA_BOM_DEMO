@@ -80,4 +80,37 @@ public class TestAll {
     public void testValueAnnotation(){
         System.out.println(fairyCat);
     }
+
+    //测试forEach传null会不会报空指针异常
+    @Test
+    public void testForEach(){
+
+        //是null的话会报空指针异常
+        //因为for-each循环编译后其实是调用对象的迭代器来遍历的 会调用iterator方法 所以会报空指针异常
+        List<String> strList = null;
+
+        //防御性编程 赋值成一个空列表(单例、不可变)
+        strList = strList == null ? Collections.emptyList() : strList;
+
+        for(String cur: strList)
+            System.out.println(cur);
+    }
+
+    @Test
+    public void testStringBuilder(){
+        StringBuilder sb = new StringBuilder("abc,");
+        System.out.println(sb.toString().substring(0,sb.length()-1));
+    }
+
+    @Test
+    public void testEqualsIgnoreCase(){
+        String test = "S";
+        System.out.println(test.equalsIgnoreCase("s"));
+    }
+
+    //测试括号是否被当成普通字符
+    @Test
+    public void testC(){
+        System.out.println("()");
+    }
 }
