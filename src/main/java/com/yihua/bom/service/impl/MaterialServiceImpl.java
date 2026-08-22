@@ -156,7 +156,12 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper,Material> im
     }
 
     @Override
-    @Transactional
+    //在hlos-mes这个新项目中用到了全局分布式事务注解@GlobalTransactional（用于不同数据库不同表之间的事务回滚，@Transactional注解只能控制单数据库的事务回滚）
+    //下面给rollbackFor属性赋值为Exception.class表示凡是有异常(包含受检异常及非受检异常两大类 )触发就会被回滚
+    //因为这里涉及到非查询操作 所以需要加事务
+    //但SAP接口不在@GlobalTransactional所在Seata框架的管控之内  所以对于SAP的事务是无法进行控制回滚的
+    //综合考虑为了节省开销 单库操作最优解是用Transactional注解
+    @Transactional(rollbackFor = Exception.class)
     public Material deleteMaterialById(Long materialId) {
         //逻辑： 返回的时候给用户显示已删除的那个物料信息
 

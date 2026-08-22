@@ -26,6 +26,8 @@ public class BomTreeShowController {
     @GetMapping("/{materialId}/tree")
     public Result<BomTreeStructVo> BomTreeStructByMaterialId(@PathVariable Long materialId){
 
+            //日志留痕,方便快速定位问题(日志文件中配置了日志级别是debug(也可以通过环境变量来控制),则<=debug级别的日志方法内容会被输出)
+            //调用日志方法小技巧：  正常流程用info 校验不通过用warn 报错用error 如果想看细节就用debug喵~
             log.debug("测试热部署，12345，上山打老虎668");
             BomTreeStructVo bomTreeStructVo = iMaterialService.BomTreeStructByMaterialId(materialId);
             return Result.success("BOM树查询成功",bomTreeStructVo);
