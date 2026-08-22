@@ -7,10 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 @SpringBootTest //加了这个注解代表这个类是测试类 同时它也会被spring IOC容器所管控
 @Slf4j
@@ -112,5 +111,50 @@ public class TestAll {
     @Test
     public void testC(){
         System.out.println("()");
+    }
+
+    //测试生成UUID
+    @Test
+    public void testUUID(){
+
+        String uuidStr = UUID.randomUUID().toString();
+
+        System.out.println("原uuid: "+ uuidStr);
+
+        //去掉UUID中的-
+        String newUUID = uuidStr.replace("-","");
+        System.out.println("新uuid: "+newUUID);
+
+    }
+
+
+    //测试获取当前的日期与时间
+    @Test
+    public void testGetCurrentDate(){
+        System.out.println("当前时间：" + LocalDateTime.now());
+    }
+
+    //对LocalDateTime返回的日期格式进行自定义化
+    @Test
+    public void testLocalDateTimeFormat(){
+        LocalDateTime today = LocalDateTime.now();
+
+        System.out.println("今天的日期与时间： "+today);
+
+        //1. 先定义一个日期格式化器(翻译官)
+        //1.1 调用静态方法ofPattern来设置自定义日期格式
+        //1.2 日期格式小知识
+            //1.2.1 yyyy 代表4位年份 如2026
+            //1.2.2 MM 代表2位月份   如08
+            //1.2.3 dd 代表2位日期  如12
+            //1.2.4 HH 代表24小时制的小时 如下午3点是15
+            //1.2.5 mm 代表2位分钟 如08
+            //1.2.6 ss 代表2位秒钟 如08
+            //1.2.7 SSS 代表3位毫秒 如001
+            //1.2.10 E 代表星期几
+        DateTimeFormatter localDateTimeFormat = DateTimeFormatter.ofPattern("yyyy年MM月dd日 E HH时mm分ss秒 ");
+        //2. 然后链式调用里面的format方法 把之前的日期格式化器传进来就可以了  它返回的是一个字符串
+        String todayNew = LocalDateTime.now().format(localDateTimeFormat);
+        System.out.println("格式化后的日期与时间： "+todayNew);
     }
 }
