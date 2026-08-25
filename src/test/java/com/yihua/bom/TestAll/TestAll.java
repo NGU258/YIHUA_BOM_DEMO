@@ -2,6 +2,7 @@ package com.yihua.bom.TestAll;
 
 import com.yihua.bom.entity.FairyCat;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -156,5 +157,23 @@ public class TestAll {
         //2. 然后链式调用里面的format方法 把之前的日期格式化器传进来就可以了  它返回的是一个字符串
         String todayNew = LocalDateTime.now().format(localDateTimeFormat);
         System.out.println("格式化后的日期与时间： "+todayNew);
+    }
+
+    //测试StringUtils类里面的补零方法leftPad
+    @Test
+    public void testLeftPad(){
+        String test = "A1";
+
+        //补3位
+        //注意这里第三个参数要传一个字符过去  不能传一个字符串 不然调用的重载方法会不一样就会导致报错了
+        //参数列表： 被操作的字符串 总长度 占位符
+        //含义： 当被操作的字符串长度小于总长度时，左边剩余的部分替换成指定占位符
+        String result = StringUtils.leftPad(test,4,'0');
+        System.out.println("补零的结果： "+result);
+
+        //第二种方法(使用String类自带的format方法 但前提这个字符串要是数字 不然会抛出异常)
+        //这里如果想补零的前提是这个字符串要是数字字符串 且只能用转成数字后用%04d来输出 无法用%s来控制 它不支持补零操作
+        String result2 = String.format("%04d",Integer.parseInt(test));
+        System.out.println("使用format补零的结果： "+result2);
     }
 }

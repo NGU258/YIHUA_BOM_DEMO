@@ -118,6 +118,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- 来自这个依赖里面的StringUtils类
+             它里面有个方法leftPad可以实现左补零的操作 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+
     </dependencies>
 
 <!--    使用<distributionManagement>标签将当前项目对应的jar包上传到私服Nexus中去-->

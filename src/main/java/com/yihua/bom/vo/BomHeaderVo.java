@@ -15,6 +15,8 @@ import lombok.NoArgsConstructor;
 //dto中只放需要用户填的字段 而其它的一些字段隐藏掉不让前端改 这样的话安全性更强
 //vo中只放需要展示给前端看的字段
 
+//对外报文叫DTO，对前端展示叫VO
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
