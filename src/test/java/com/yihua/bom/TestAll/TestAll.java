@@ -1,7 +1,9 @@
 package com.yihua.bom.TestAll;
 
 import com.yihua.bom.entity.FairyCat;
+import com.yihua.bom.entity.Step;
 import lombok.extern.slf4j.Slf4j;
+import net.minidev.json.JSONArray;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -98,8 +100,14 @@ public class TestAll {
 
     @Test
     public void testStringBuilder(){
+        //测试去掉末尾的逗号,
         StringBuilder sb = new StringBuilder("abc,");
         System.out.println(sb.toString().substring(0,sb.length()-1));
+
+        //测试清空字符串
+        sb.setLength(0);
+        sb.append("元气小喵仙~").append("晚上好喵~");
+        System.out.println(sb.toString());
     }
 
     @Test
@@ -162,7 +170,7 @@ public class TestAll {
     //测试StringUtils类里面的补零方法leftPad
     @Test
     public void testLeftPad(){
-        String test = "A1";
+        String test = "1";
 
         //补3位
         //注意这里第三个参数要传一个字符过去  不能传一个字符串 不然调用的重载方法会不一样就会导致报错了
@@ -176,4 +184,44 @@ public class TestAll {
         String result2 = String.format("%04d",Integer.parseInt(test));
         System.out.println("使用format补零的结果： "+result2);
     }
+
+    //测试StringUtils工具类中的方法
+    @Test
+    public void testStringUtilsFun(){
+        //默认值
+        //只有第一个参数为null时则使用默认值（第二个参数） 反之如果是空字符串或其它非空字符串都会直接原样返回
+        System.out.println(StringUtils.defaultString("","666"));
+        System.out.println(StringUtils.defaultString(null,"元气小喵仙"));
+    }
+
+
+    //测试自然排序比较器
+    @Test
+    public void testNaturalOrderComparator(){
+        List<Step> stepList = new ArrayList<>();
+        stepList.add(Step.builder()
+                .operationStepNum(3l)
+                .operationStepName("C")
+                .build());
+        stepList.add(Step.builder()
+                .operationStepNum(null)
+                .operationStepName("D")
+                .build());
+        stepList.add(Step.builder()
+                .operationStepNum(1l)
+                .operationStepName("A")
+                .build());
+        stepList.add(Step.builder()
+                .operationStepNum(2l)
+                .operationStepName("B")
+                .build());
+
+        System.out.println("排序前： ");
+        System.out.println(JSONArray.toJSONString(stepList));
+        System.out.println("排序后： ");
+        stepList.sort(Comparator.comparing(Step::getOperationStepNum,Comparator.nullsLast(Comparator.naturalOrder())));
+        System.out.println(JSONArray.toJSONString(stepList));
+
+    }
+
 }
