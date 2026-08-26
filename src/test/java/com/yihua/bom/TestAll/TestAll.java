@@ -1,5 +1,7 @@
 package com.yihua.bom.TestAll;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.yihua.bom.entity.FairyCat;
 import com.yihua.bom.entity.Step;
 import lombok.extern.slf4j.Slf4j;
@@ -222,6 +224,29 @@ public class TestAll {
         stepList.sort(Comparator.comparing(Step::getOperationStepNum,Comparator.nullsLast(Comparator.naturalOrder())));
         System.out.println(JSONArray.toJSONString(stepList));
 
+        System.out.println("测试对对象进行序列化操作：");
+        //默认null字段是不会被序列化进去输出的
+        System.out.println(JSON.toJSONString(Step.builder()
+                //.operationStepNum(1l)
+                //.operationStepName("元气小喵仙~")
+                .build()));
+
+        System.out.println("测试序列化时输出null字段");
+        //如果想输出的话得加个序列化特性开关SerializerFeature
+        System.out.println(JSON.toJSONString(Step.builder()
+                .build(), SerializerFeature.WriteMapNullValue));
+
+        //除了这个还有其它好玩的东西
+        //WriteMapNullValue 所有null字段都输出 示例： "name":null
+        //WriteNullStringAsEmpty 所有null字段都输出为空字符串 示例： "name":""
+            //测试一下null转空字符串
+            System.out.println("测试一下null转空字符串"); //测试发现Object对象这里没法null转""
+            System.out.println(JSON.toJSONString(Step.builder()
+                .build(), SerializerFeature.WriteNullStringAsEmpty));
+
+        //WriteNullNumberAsZero 所有null字段都输出为0 示例： "age":0
+        //WriteNullListAsEmpty 所有null字段都输出为空列表 示例： "stepList":[]
+        //WriteNullBooleanAsFalse 所有null字段都输出为false 示例： "enabled":false
     }
 
 }
