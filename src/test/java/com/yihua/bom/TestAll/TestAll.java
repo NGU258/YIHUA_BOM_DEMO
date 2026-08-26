@@ -200,6 +200,9 @@ public class TestAll {
     //测试自然排序比较器
     @Test
     public void testNaturalOrderComparator(){
+
+        //测试一下请求与响应的时间
+        long start = System.currentTimeMillis();
         List<Step> stepList = new ArrayList<>();
         stepList.add(Step.builder()
                 .operationStepNum(3l)
@@ -218,11 +221,18 @@ public class TestAll {
                 .operationStepName("B")
                 .build());
 
-        System.out.println("排序前： ");
+        System.out.println("排序前(使用JSONArray类方法序列化成JSON)： ");
         System.out.println(JSONArray.toJSONString(stepList));
-        System.out.println("排序后： ");
+        System.out.println("排序后(使用JSONArray类方法序列化成JSON)： ");
         stepList.sort(Comparator.comparing(Step::getOperationStepNum,Comparator.nullsLast(Comparator.naturalOrder())));
         System.out.println(JSONArray.toJSONString(stepList));
+
+        System.out.println("排序前(使用JSON类方法序列化成JSON)： ");
+        System.out.println(JSON.toJSONString(stepList));
+        System.out.println("排序后(使用JSON类方法序列化成JSON)： ");
+        stepList.sort(Comparator.comparing(Step::getOperationStepNum,Comparator.nullsLast(Comparator.naturalOrder())));
+        System.out.println(JSON.toJSONString(stepList));
+
 
         System.out.println("测试对对象进行序列化操作：");
         //默认null字段是不会被序列化进去输出的
@@ -247,6 +257,8 @@ public class TestAll {
         //WriteNullNumberAsZero 所有null字段都输出为0 示例： "age":0
         //WriteNullListAsEmpty 所有null字段都输出为空列表 示例： "stepList":[]
         //WriteNullBooleanAsFalse 所有null字段都输出为false 示例： "enabled":false
+
+        System.out.println("响应时间： "+ (System.currentTimeMillis() - start ));
     }
 
 }
