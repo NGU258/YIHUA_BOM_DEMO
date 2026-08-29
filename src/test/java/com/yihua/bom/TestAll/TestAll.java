@@ -311,7 +311,17 @@ public class TestAll {
                 .build());
 
         System.out.println("过滤前： "+JSON.toJSONString(stepList667));
-        List<EsopFile> typeResult = stepList667.stream().filter(cur -> "PDF".equalsIgnoreCase(cur.getFileType())).collect(Collectors.toList());
-        System.out.println("过滤后： "+JSON.toJSONString(typeResult));//验证通过
+        List<EsopFile> typeResult = stepList667
+                .stream() //把当前数组变成一个流水线  里面的元素将会一个个的从流水线中流出来
+                .filter(cur -> "PDF".equalsIgnoreCase(cur.getFileType())) //过滤器设置筛选规则  只有满足条件的元素才会被留下来  参数是lambda表达式 示例： cur->布尔值
+                .collect(Collectors.toList());//将所有满足条件的元素重新装进一个新的数组 保存完后最终返回
+        System.out.println("过滤后(使用流式写法)： "+JSON.toJSONString(typeResult));//验证通过
+        //下面的这个传统写法等价于上面的流式写法
+        List<EsopFile> esopFileList = new ArrayList<>();
+        for(EsopFile cur: stepList667)
+            if("PDF".equalsIgnoreCase(cur.getFileType()))
+                esopFileList.add(cur);
+        System.out.println("过滤后(使用传统写法)： "+JSON.toJSONString(esopFileList));
+
     }
 }
