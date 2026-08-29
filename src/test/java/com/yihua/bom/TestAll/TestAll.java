@@ -2,6 +2,7 @@ package com.yihua.bom.TestAll;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.serializer.SerializerFeature;
+import com.yihua.bom.entity.EsopFile;
 import com.yihua.bom.entity.FairyCat;
 import com.yihua.bom.entity.Step;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @SpringBootTest //加了这个注解代表这个类是测试类 同时它也会被spring IOC容器所管控
 @Slf4j
@@ -259,6 +261,57 @@ public class TestAll {
         //WriteNullBooleanAsFalse 所有null字段都输出为false 示例： "enabled":false
 
         System.out.println("响应时间： "+ (System.currentTimeMillis() - start ));
-    }
 
+        //测试一下按文件名默认升序
+        List<EsopFile> stepList666 = new ArrayList<>();
+        stepList666.add(EsopFile.builder()
+                .fileSize(6l)
+                .fileName("C")
+                .build());
+        stepList666.add(EsopFile.builder()
+                .fileSize(null)
+                .fileName("D")
+                .build());
+        stepList666.add(EsopFile.builder()
+                .fileSize(6l)
+                .fileName("A")
+                .build());
+        stepList666.add(EsopFile.builder()
+                .fileSize(6l)
+                .fileName("B")
+                .build());
+
+
+        System.out.println("没按文件名排序前【EsopFile】： "+JSON.toJSONString(stepList666));
+
+        stepList666.sort(Comparator.comparing(cur->cur.getFileName(),Comparator.nullsLast(Comparator.naturalOrder())));
+        System.out.println("按文件名排序后【EsopFile】： "+JSON.toJSONString(stepList666));
+
+        //测试一下将非PDF文件的对象过滤掉
+        List<EsopFile> stepList667 = new ArrayList<>();
+        stepList667.add(EsopFile.builder()
+                .fileType("PDF")
+                .fileSize(6l)
+                .fileName("C")
+                .build());
+        stepList667.add(EsopFile.builder()
+                .fileType("DOCX")
+                .fileSize(null)
+                .fileName("D")
+                .build());
+        stepList667.add(EsopFile.builder()
+                .fileType("pdf")
+                .fileSize(6l)
+                .fileName("A")
+                .build());
+        stepList667.add(EsopFile.builder()
+                .fileType("img")
+                .fileSize(6l)
+                .fileName("B")
+                .build());
+
+        System.out.println("过滤前： "+JSON.toJSONString(stepList667));
+        List<EsopFile> typeResult = stepList667.stream().filter(cur -> "PDF".equalsIgnoreCase(cur.getFileType())).collect(Collectors.toList());
+        System.out.println("过滤后： "+JSON.toJSONString(typeResult));//验证通过
+    }
 }

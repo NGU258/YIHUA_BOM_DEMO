@@ -1,5 +1,5 @@
 server:
-  port: 8088
+  port: 8066
 
 #自定义控制台日志格式输出及字体颜色
 logging:
@@ -42,4 +42,6 @@ spring:
     username: ${BOM_USERNAME:root}
     password: ${BOM_PASSWORD:lyq20041230}
     driver-class-name: com.mysql.cj.jdbc.Driver
-
+  jackson:
+    deserialization:
+      adjust-dates-to-context-time-zone: false #默认是true 反序列化会被转成UTC 变成2026-08-21T04:30Z  开启了之后就能保留后面的+08:00偏移量 示例：2026-08-21T12:30+08:00
