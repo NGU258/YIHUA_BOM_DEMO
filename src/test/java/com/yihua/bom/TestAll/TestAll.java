@@ -109,7 +109,7 @@ public class TestAll {
         System.out.println(sb.toString().substring(0,sb.length()-1));
 
         //测试清空字符串
-        sb.setLength(0);
+        sb.setLength(0);//长度归零后StringBuilder中的原字符数组字符将会被后面拼接过来的字符覆盖掉
         sb.append("元气小喵仙~").append("晚上好喵~");
         System.out.println(sb.toString());
     }
@@ -313,7 +313,7 @@ public class TestAll {
         System.out.println("过滤前： "+JSON.toJSONString(stepList667));
         List<EsopFile> typeResult = stepList667
                 .stream() //把当前数组变成一个流水线  里面的元素将会一个个的从流水线中流出来
-                .filter(cur -> "PDF".equalsIgnoreCase(cur.getFileType())) //过滤器设置筛选规则  只有满足条件的元素才会被留下来  参数是lambda表达式 示例： cur->布尔值
+                .filter(cur -> "PDF".equalsIgnoreCase(cur.getFileType())) //过滤器设置筛选规则  只有满足条件的元素才会被留下来 参数是lambda表达式 示例： cur->布尔值
                 .collect(Collectors.toList());//将所有满足条件的元素重新装进一个新的数组 保存完后最终返回
         System.out.println("过滤后(使用流式写法)： "+JSON.toJSONString(typeResult));//验证通过
         //下面的这个传统写法等价于上面的流式写法
@@ -322,6 +322,5 @@ public class TestAll {
             if("PDF".equalsIgnoreCase(cur.getFileType()))
                 esopFileList.add(cur);
         System.out.println("过滤后(使用传统写法)： "+JSON.toJSONString(esopFileList));
-
     }
 }
