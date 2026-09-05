@@ -25,11 +25,16 @@ public class GlobalExceptionHandler {
     public Result<Void> ValidationExceptionHandler(MethodArgumentNotValidException e){
 
         //思路： 将相关的异常信息以分号的形式拼接 然后再返回给用户看 例如 异常1;异常2;……
-        String errorMessage = e.getBindingResult() //获取存储异常信息的结果对象
-                .getFieldErrors() //拿出该对象中的所有错误字段
+        String errorMessage = e.getBindingResult() //获取存储异常信息的结果对象 校验结果
+                .getFieldErrors() //拿出该对象中的所有错误字段 错题卡
                 .stream() //转成流(流水线 一个螺丝一个螺丝的送)
-                .map(FieldError::getDefaultMessage) //获取所有错误字段对应的错误信息  这里就对应着校验注解对应的message属性值了
-                .collect(Collectors.joining(";"));//收集起来 然后用分号分隔
+                .map(cur -> {
+                    //我去还可以灵活的写的 可以指定该字段触发的错误校验
+//                    if("desc".equalsIgnoreCase(cur.getField()))
+//                        return "desc不满足以下规则 ： 必须以f或F开头 以t或T结尾 中间任意字符皆可;";
+                    return cur.getField() + cur.getDefaultMessage();
+                }) //map是加工工厂  进去几个就出来几个 只是它出来的形式可以被加工成不同的形式 这里的错误信息源自校验注解的message属性值
+                .collect(Collectors.joining(";"));//指定要用的工具箱 这里是用;将错误信息收集起来
 
         return Result.fail(errorMessage);
     }

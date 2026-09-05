@@ -28,8 +28,12 @@
 -->
     <properties>
         <java.version>8</java.version>
-        <mybatis-plus-version>3.5.5</mybatis-plus-version>
+        <mybatis.plus.version>3.5.5</mybatis.plus.version>
         <mysql.version>8.0.33</mysql.version>
+        <fastjson.version>1.2.76</fastjson.version>
+        <hzero.boot.import.version>1.6.2.RELEASE</hzero.boot.import.version>
+        <hzero.starter.export.version>1.6.3.RELEASE</hzero.starter.export.version>
+        <validation.api.version>2.0.1.Final</validation.api.version>
     </properties>
 
 <!-- 引用一些相关的依赖包进来  或者说引入一些其它的项目进来复用。-->
@@ -66,7 +70,7 @@
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-boot-starter</artifactId>
-            <version>${mybatis-plus-version}</version>
+            <version>${mybatis.plus.version}</version>
         </dependency>
 
 <!--
@@ -129,25 +133,32 @@
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
-            <version>1.2.76</version>
+            <version>${fastjson.version}</version>
         </dependency>
+
+<!--  添加校验注解所在的依赖包进来-->
+        <dependency>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
+            <version>${validation.api.version}</version>
+        </dependency>
+
 
 <!--    zero相关的依赖需要去汉得的Nexus仓库中获取  由于当前项目会上传到Github中 也就是代码会放在国外的位置  所以汉得的Nexus仓库地址就不写在当前项目中了 只有在需要的时候引入进来去汉得的Nexus中拉取需要的依赖jar 不需要的时候回滚删掉即可-->
         <!-- 玩一下hzero平台的导入跟导出 导入功能实现要用到的注解@ImportService在下面这个依赖中  -->
         <!-- 但这里用Maven下载好后好像没下全 Maven那还是会报错 不需要的时候记得注释掉防止报错导致项目无法启动 -->
-        <dependency>
-            <groupId>org.hzero.boot</groupId>
-            <artifactId>hzero-boot-import</artifactId>
-            <version>1.6.2.RELEASE</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.hzero.boot</groupId>-->
+<!--            <artifactId>hzero-boot-import</artifactId>-->
+<!--            <version>${hzero.boot.import.version}</version>-->
+<!--        </dependency>-->
 
 <!--        导出功能实现要用到的注解@ExcelExport就在下面这个依赖中-->
-        <dependency>
-            <groupId>org.hzero.starter</groupId>
-            <artifactId>hzero-starter-export</artifactId>
-            <version>1.6.3.RELEASE</version>
-        </dependency>
-
+<!--        <dependency>-->
+<!--            <groupId>org.hzero.starter</groupId>-->
+<!--            <artifactId>hzero-starter-export</artifactId>-->
+<!--            <version>${hzero.starter.export.version}</version>-->
+<!--        </dependency>-->
 
     </dependencies>
 

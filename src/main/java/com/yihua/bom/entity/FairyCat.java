@@ -4,8 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.validator.constraints.Length;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
 
 @Builder
 @AllArgsConstructor
@@ -31,5 +36,12 @@ public class FairyCat {
     private String name;
 
     @Value("${JAVA_HOME:环境变量中没有这个值喵~}")
+    @Pattern(regexp = "^[fF].*[tT]$",message = "不满足以下规则 ： 必须以f或F开头 以t或T结尾 中间任意字符皆可") //当前的规则是必须以f或F开关 以t或T结尾 中间任意字符皆可
+    @NotNull(message = "不能为null喵~") //不能为null
+//  @NotBlank //不能为null跟空串或空字符串
     private String desc;
+
+    @Length(max=5,message = "length的长度必须<=5")
+    private String length;
+
 }
