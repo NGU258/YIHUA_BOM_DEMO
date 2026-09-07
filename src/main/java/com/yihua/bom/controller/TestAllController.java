@@ -67,8 +67,9 @@ public class TestAllController {
 
     //测试一下汉得老项目中的校验注解
     @GetMapping("/testValidation")
-    public String testValidatio(@Validated  @RequestBody FairyCat fairyCat){
+    public FairyCat testValidatio(@Validated  @RequestBody FairyCat fairyCat){
         System.out.println(JSON.toJSONString(fairyCat,SerializerFeature.WriteMapNullValue));
-        return JSON.toJSONString(fairyCat,SerializerFeature.WriteMapNullValue);
+        System.out.println(JSON.toJSONString(fairyCat));
+        return fairyCat;
     }
 }

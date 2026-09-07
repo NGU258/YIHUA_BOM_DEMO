@@ -1,5 +1,10 @@
 package com.yihua.bom.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,6 +22,7 @@ import javax.validation.constraints.Pattern;
 @NoArgsConstructor
 @Data
 @Component //把当前这个类加到spring IOC容器中去 这样@Value注解就能生效了 在需要的位置使用@Autowired注解导入进来就可以了
+@JsonInclude(value = JsonInclude.Include.NON_NULL) //由于@RestController在将实体类对象序列化成JSON时默认会保留里面的null值字段 如：{"name":null,"desc":"ft","length":"Test6"} 所以需要使用注解@JsonInclude将所有null值字段忽略掉 不把它放到JSON中 如：{"desc":"ft","length":"Test6"}
 public class FairyCat {
 
     //好玩的给成员变量赋默认值的用法： @Value注解+占位符
@@ -36,7 +42,7 @@ public class FairyCat {
     private String name;
 
     @Value("${JAVA_HOME:环境变量中没有这个值喵~}")
-    @Pattern(regexp = "^[fF].*[tT]$",message = "不满足以下规则 ： 必须以f或F开头 以t或T结尾 中间任意字符皆可") //当前的规则是必须以f或F开关 以t或T结尾 中间任意字符皆可
+    @Pattern(regexp = "^[fF].*[tT]$" , message = "不满足以下规则 ： 必须以f或F开头 以t或T结尾 中间任意字符皆可") //当前自定义的规则是必须以f或F开关 以t或T结尾 中间任意字符皆可
     @NotNull(message = "不能为null喵~") //不能为null
 //  @NotBlank //不能为null跟空串或空字符串
     private String desc;
@@ -44,4 +50,13 @@ public class FairyCat {
     @Length(max=5,message = "length的长度必须<=5")
     private String length;
 
+    //将数字类型转成数字字符串类型 解决前端计算器因数字位数太长导致的精度丢失问题
+    //示例：原来序列化的结果是："id":9007199254740993
+    //   加了下面这个注解后：  "id":"9007199254740993"
+    @JsonSerialize(using = ToStringSerializer.class)
+    @JsonProperty("userId") //修改该字段在JSON中的字段名 包括序列化跟反序列化场景
+    private Long id;
+
+    @JsonIgnore //该字段不参与序列化 换句话说在JSON中不会出现该字段
+    private Long height;
 }
