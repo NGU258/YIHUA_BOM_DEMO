@@ -2,6 +2,7 @@ package com.yihua.bom.TestAll;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.serializer.SerializerFeature;
+import com.yihua.bom.config.FairyCatConfigurationProperties;
 import com.yihua.bom.entity.EsopFile;
 import com.yihua.bom.entity.FairyCat;
 import com.yihua.bom.entity.Step;
@@ -322,5 +323,21 @@ public class TestAll {
             if("PDF".equalsIgnoreCase(cur.getFileType()))
                 esopFileList.add(cur);
         System.out.println("过滤后(使用传统写法)： "+JSON.toJSONString(esopFileList));
+    }
+
+    //测试一下自定义配置项
+    @Autowired
+    FairyCat fairyCatTest;
+    @Test
+    public void testBindLazy(){
+        System.out.println(JSON.toJSONString(fairyCatTest));
+    }
+
+    //测试一下配置类字段名跟yml配置文件属性名之间的映射绑定
+    @Autowired
+    private FairyCatConfigurationProperties fairyCatConfigurationProperties;
+    @Test
+    public void testBindYml(){
+        System.out.println(JSON.toJSONString(fairyCatConfigurationProperties));
     }
 }

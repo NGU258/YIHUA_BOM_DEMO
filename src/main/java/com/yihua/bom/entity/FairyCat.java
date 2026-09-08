@@ -59,4 +59,8 @@ public class FairyCat {
 
     @JsonIgnore //该字段不参与序列化 换句话说在JSON中不会出现该字段
     private Long height;
+
+    //@ConfigurationProperties支持松散绑定 但@Value注解不支持 里面占位符中的匹配变量名使用的算法乃是精准匹配喵~
+    @Value("${fairyCat.name:元气好喵仙~}") //想玩一下松散绑定 但可惜不支持
+    private String alias;
 }

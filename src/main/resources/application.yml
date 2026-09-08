@@ -45,3 +45,8 @@ spring:
   jackson:
     deserialization:
       adjust-dates-to-context-time-zone: false #默认是true 反序列化会被转成UTC 变成2026-08-21T04:30Z  开启了之后就能保留后面的+08:00偏移量 示例：2026-08-21T12:30+08:00
+
+#玩一下自定义配置  游戏效果在TestAll单元测试中
+fairy-C_a_t: #可以结合@ConfigurationProperties注解玩下松散绑定
+  name: ${FAIRY-CAT-NAME:元气啥喵仙~}
+  age: ${FAIRY-CAT-AGE:22}
