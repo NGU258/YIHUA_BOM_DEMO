@@ -1,5 +1,7 @@
 server:
   port: 8066
+  servlet:
+    CONTEXTPATH: /lyq #自定义项目访问路径前缀 这里因为有松散命名 所以全大写也问题不大
 
 #自定义控制台日志格式输出及字体颜色
 logging:
@@ -48,5 +50,7 @@ spring:
 
 #玩一下自定义配置  游戏效果在TestAll单元测试中
 fairy-C_a_t: #可以结合@ConfigurationProperties注解玩下松散绑定
-  name: ${FAIRY-CAT-NAME:元气啥喵仙~}
+  nam-e: ${FAIRY-CAT-NAME:元气啥喵仙~}
   age: ${FAIRY-CAT-AGE:22}
+  test: ${FAIRY-CAT-TEST:一只可爱的小喵仙~}
+  sex: ${FAIRY-CAT-SEX:女}

@@ -1,9 +1,7 @@
 package com.yihua.bom.config;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +18,11 @@ public class FairyCatConfigurationProperties {
     private Long age;
 
     public static final String alias = "f-a-i-r-y-c-a-t";
+
+    @Value("生成的cuid: ${random.cuid}")
+    private String desc;
+
+    private Character sex;
 }
 //玩法在TestAll单元测试中
 
