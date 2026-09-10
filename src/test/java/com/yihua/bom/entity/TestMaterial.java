@@ -135,9 +135,6 @@ public class TestMaterial {
         String orginStr = "Good morning~";
         orginStr = orginStr.replace("66","00");
         System.out.println(orginStr);
-
     }
-
-
 }
 

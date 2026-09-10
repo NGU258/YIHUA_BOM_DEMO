@@ -50,7 +50,13 @@ spring:
 
 #玩一下自定义配置  游戏效果在TestAll单元测试中
 fairy-C_a_t: #可以结合@ConfigurationProperties注解玩下松散绑定
-  nam-e: ${FAIRY-CAT-NAME:元气啥喵仙~}
+  na-m--E------: ${FAIRY-CAT-NAME:元气啥喵仙~}
   age: ${FAIRY-CAT-AGE:22}
   test: ${FAIRY-CAT-TEST:一只可爱的小喵仙~}
   sex: ${FAIRY-CAT-SEX:女}
+
+#玩一下自定义Mapper路径的配置用法 Mybatis-plus只是基于Mybatis的增强版 Mybatis有的Mybatis-plus也有
+mybatis-plus:
+  #在Mybatis-plus中Mapper的默认配置路径： classpath*:/mapper/**/*.xml  也就是默认会匹配所有jar下classpath/mapper下所有层的xml文件
+  mapperLocations: [classpath*:mapper/*Mapper.xml,classpath*:mapper/*/*Mapper.xml] #行内写法 匹配所有jar下classpath/mapper目录中第一层跟第二层所有以Mapper结尾的xml文件  如果是行外写法的话就是在每个数组元素前面加-
+
