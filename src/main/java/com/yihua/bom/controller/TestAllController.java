@@ -72,4 +72,16 @@ public class TestAllController {
         System.out.println(JSON.toJSONString(fairyCat));
         return fairyCat;
     }
+
+    //玩一下输出当前系统中所有的环境变量名
+    @GetMapping("/getEnv")
+    public String getEnv(){
+        return JSON.toJSONString(System.getenv());
+    }
+
+    //玩一下根据用户传入的环境变量名来输出对应的环境变量值
+    @GetMapping("/getEnvByEnvName/{envName}")
+    public String getEnvByEnvName(@PathVariable("envName") String envName){
+        return "\""+envName+"\":\""+System.getenv(envName)+"\"";
+    }
 }

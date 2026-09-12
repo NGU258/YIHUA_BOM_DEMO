@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<!--上面这个dtd文件是用的汉得Mapper对应xml中的配置-->
+
+<mapper namespace="com.yihua.bom.Mapper.TestAllMapper">
+
+    <select id="getMaterialMapList" resultType="java.util.Map"><!-- 哪怕这里是返回的list  返回值类型仍需写成元素类型(它的全限定名)-->
+            select * from material limit 7,1; #尝试只取数据库中的第八行数据
+    </select>
+
+</mapper>
