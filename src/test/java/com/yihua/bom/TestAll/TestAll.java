@@ -340,4 +340,12 @@ public class TestAll {
     public void testBindYml(){
         System.out.println(JSON.toJSONString(fairyCatConfigurationProperties));
     }
+
+    //测试一下用ANSI指令来清屏
+    @Test
+    public void testPrintAnsiToClear(){
+        System.out.println("早上好呀~");
+        System.out.println("\033[H\033[2J\033[3J"); //这里没有效果 只是输出了一个空白行
+        System.out.println("晚上好呀~");
+    }
 }

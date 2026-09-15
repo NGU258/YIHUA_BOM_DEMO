@@ -4,8 +4,79 @@
 
 <mapper namespace="com.yihua.bom.Mapper.TestAllMapper">
 
-    <select id="getMaterialMapList" resultType="java.util.Map"><!-- 哪怕这里是返回的list  返回值类型仍需写成元素类型(它的全限定名)-->
+    <!-- 这里不管是实体类对象还是装实体类对象的list  返回值类型resultType仍需写成这个实体类对象的全限定名 这个封装到list的操作是Mybatis自己干的活 -->
+    <select id="getMaterialMapList" resultType="java.util.Map"><!-- 这里我尝试返回的类型是一个Map  因为实体类里面的属性名跟属性值刚好是key跟value的关系 刚好是一个Map 这个实体类转Map的活就是交给Mybatis完成的-->
             select * from material limit 7,1; #尝试只取数据库中的第八行数据
     </select>
 
+<!--    这里尝试一下java内建的类型别名 以查询物料表中的物料名为例 （知识定位：技术笔记htmlxmd中的关键词:效果相当于写了它的全限定名）-->
+    <select id = "getFirstMaterialName" resultType = "String">
+        select material_name from material limit 1; <!--只查数据库中的第一条数据-->
+    </select>
+
+    <select id="getMaterialByMaterialType" resultType ="map">
+        select * from material
+        <where> <!--where标签用来解决生成的sql中and跟or多余的问题 知识点定位: htmlxmd中的定位关键词：使用双标签where -->
+            material_type in
+            <foreach collection="materialType" item="cur" open="(" separator="," close=")" >
+                #{cur}
+            </foreach>
+
+            <if test="materialType neq null and materialType.size() > 0"> <!-- 这里的字符串是一个ONGL表达式 最后判断的话用英文 也就是neq这种形式 代表!= -->
+                and enabled = '1'  #这里玩一下where跟if动态sql标签的用法
+            </if>
+        </where>
+    </select>
+
+    <select id="getMaterialInfoByMaterialType" resultType = "map">
+        select * from material
+        <!-- 使用sql版本的switch试一下-->
+        <where>
+            <choose>
+                <when test = "materialType neq null and materialType neq '' and materialType eq 'product'"> <!-- 这里写eq比直接写=更稳妥 我感觉后面用英文写法会好点 -->
+                    and material_type = 'product'
+                </when> <!-- when标签是一个自带break的case -->
+                <when test="materialType neq null and materialType neq '' and materialType eq 'semi_finished'"> <!-- 这里如果是OGNL表达式的话 里面写的名称是实体类属性名称  因为是用他们里面的值来判断的-->
+                    and material_type = 'semi_finished' #这里的话因为是自定义Sql 也就是会把这些片段拼接到前面的sql中  所以这里写的是数据库字段名称
+                </when>
+                <otherwise>
+                    and material_type = 'raw_material'
+                </otherwise>
+            </choose>
+        </where>
+    </select>
+
+    <update id = "updateMateiralName"> <!-- 更新的话不需要返回啥类型 这里只需要用id属性将它跟那个Mapper接口方法绑定就可以了-->
+        update material
+            <set> <!-- 这里可以使用set标签来完成动态更新的效果-->
+                <if test="materialName neq null and materialName neq ''">
+                    material_name = #{materialName}
+                </if>
+            </set>
+        <where>
+            <choose>
+                <when test ="materialCode neq null and materialCode neq ''">
+                    material_code = #{materialCode}
+                </when>
+                <otherwise>
+                    1 = 0 #这里如果用户没有传入materialCode的话就不执行相应的更新操作
+                </otherwise>
+            </choose>
+        </where>
+    </update>
+
+    <!--玩一下sql代码片段-->
+    <!-- 1. 先声明  声明的地方一般放在Mapper的最前面  这样可读性更好 这里只是单独练习一下-->
+    <sql id="MaterialField">
+        <!-- 输出的时候可以看到这里只要写了相关字段名的话就能看到对应的数据库值 如果没传的话就不会有值绑定失败就是null -->
+        id,material_code,material_name,material_type,spec,unit,enabled,create_time,update_time,deleted #这个地方开头报红是Idea自身的官方Bug 并不是语法上的问题  这里可以选择忽略它 运行的时候并不会报错
+    </sql>
+
+    <select id = "getMaterialAllData" resultType = "com.yihua.bom.entity.Material">
+   <!-- 2. 后引用 -->
+        select
+        <include refid="MaterialField">
+        </include>
+        from material;
+    </select>
 </mapper>

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -36,4 +37,35 @@ public class TestMapper {
         $超级炸弹喵$.forEach(cur-> System.out.println("enabled:"+cur.get("enabled")));
         System.out.println("————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————\n");
   }
+
+  //测试一下类型别名
+    @Test
+    public void testTypeAlias(){
+        System.out.println(testAllMapper.getFirstMaterialName());
+    }
+
+    //测试一下动态sql的用法
+    @Test
+    public void testDynamicSql(){
+        System.out.println(testAllMapper.getMaterialByMaterialType(Arrays.asList("SEMI_FINISHED","RAW_MATERIAL")));;
+    }
+
+    //测试一下sql版本的switch： choose when otherwise
+    @Test
+    public void testSqlVersionSwitch(){
+        System.out.println(testAllMapper.getMaterialInfoByMaterialType("semi_finished1"));
+    }
+
+    //复习并测试一下<update>标签的用法
+    @Test
+    public void testUpdateLabel(){
+        testAllMapper.updateMateiralName("fairyCat001","元气小喵仙~");
+    }
+
+    //测试sql代码片段
+    @Test
+    public void testSqlFrag(){
+        System.out.println(testAllMapper.getMaterialAllData());
+    }
+
 }
