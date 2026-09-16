@@ -3,15 +3,25 @@
 <!--上面这个dtd文件是用的汉得Mapper对应xml中的配置-->
 
 <mapper namespace="com.yihua.bom.Mapper.TestAllMapper">
+    <!-- 细节一： 在自定义Mapper的xml中 以前那些Mybatis-plus注解实现的拼接sql的功能（比如@TableLogic 对应and deleted = 0）在这里是完全失效的 生效的场景是在调用Mybatis-plus自带的CRUD方法 它生成的sql中会带上注解的逻辑 然而在自定义Mapper这里所有逻辑都需要自己编写 如果不指定where deleted=0的话则会把所有包括已删除的数据也给一起查出来 这样就不对了喵~-->
+    <!-- 细节二： 在自定义Mapper的xml中 一般自定义的sql后面并不需要加上分号-->
+
+    <!--玩一下sql代码片段-->
+    <!-- 1. 先声明  声明的地方一般放在Mapper的最前面  这样可读性更好 这里只是单独练习一下-->
+    <sql id="MaterialField">
+        <!-- 控制台输出时可以看到这里只要写了相关字段名就能看到实体类字段上存着对应的数据库值 如果没写的话就是null -->
+        id,material_code,material_name,material_type,spec,unit,enabled,create_time,update_time,deleted <!-- 这个地方开头报红是Idea自身的官方Bug 并不是语法上的问题  这里可以选择忽略它 运行的时候并不会报错-->
+    </sql>
+
 
     <!-- 这里不管是实体类对象还是装实体类对象的list  返回值类型resultType仍需写成这个实体类对象的全限定名 这个封装到list的操作是Mybatis自己干的活 -->
     <select id="getMaterialMapList" resultType="java.util.Map"><!-- 这里我尝试返回的类型是一个Map  因为实体类里面的属性名跟属性值刚好是key跟value的关系 刚好是一个Map 这个实体类转Map的活就是交给Mybatis完成的-->
-            select * from material limit 7,1; #尝试只取数据库中的第八行数据
+            select * from material where deleted = 0 limit 7,1 #尝试只取数据库中的第八行数据
     </select>
 
 <!--    这里尝试一下java内建的类型别名 以查询物料表中的物料名为例 （知识定位：技术笔记htmlxmd中的关键词:效果相当于写了它的全限定名）-->
     <select id = "getFirstMaterialName" resultType = "String">
-        select material_name from material limit 1; <!--只查数据库中的第一条数据-->
+        select material_name from material where deleted = 0 limit 1 <!--只查数据库中的第一条数据-->
     </select>
 
     <select id="getMaterialByMaterialType" resultType ="map">
@@ -25,6 +35,7 @@
             <if test="materialType neq null and materialType.size() > 0"> <!-- 这里的字符串是一个ONGL表达式 最后判断的话用英文 也就是neq这种形式 代表!= -->
                 and enabled = '1'  #这里玩一下where跟if动态sql标签的用法
             </if>
+            and deleted = 0
         </where>
     </select>
 
@@ -37,46 +48,43 @@
                     and material_type = 'product'
                 </when> <!-- when标签是一个自带break的case -->
                 <when test="materialType neq null and materialType neq '' and materialType eq 'semi_finished'"> <!-- 这里如果是OGNL表达式的话 里面写的名称是实体类属性名称  因为是用他们里面的值来判断的-->
-                    and material_type = 'semi_finished' #这里的话因为是自定义Sql 也就是会把这些片段拼接到前面的sql中  所以这里写的是数据库字段名称
+                    and material_type = 'semi_finished' <!--这里的话因为是自定义Sql 也就是会把这些片段拼接到前面的sql中  所以这里写的是数据库字段名称-->
                 </when>
                 <otherwise>
                     and material_type = 'raw_material'
                 </otherwise>
             </choose>
+            and deleted = 0
         </where>
     </select>
 
-    <update id = "updateMateiralName"> <!-- 更新的话不需要返回啥类型 这里只需要用id属性将它跟那个Mapper接口方法绑定就可以了-->
-        update material
-            <set> <!-- 这里可以使用set标签来完成动态更新的效果-->
+    <update id = "updateMaterialName"> <!-- 更新的话不需要返回啥类型 这里只需要用id属性将它跟那个Mapper接口方法绑定就可以了-->
+        update material <!-- 这里update关键字得自己写 标签不会自动带出来或者说生成这个sql片段-->
+            <set> <!-- 这里可以使用set标签来完成动态更新某个字段值的效果 它还有个效果就是可以把拼接sql完工后把多余的逗号给去掉-->
                 <if test="materialName neq null and materialName neq ''">
-                    material_name = #{materialName}
+                    material_name = #{materialName}, <!-- 这里在sql后面写注释的话最好用Xml注释  也就是当前这个注释的写法 sql在拼接的时候会忽略掉这个xml注释 但如果是写成Sql注释#的话则会被拼接到生成的Sql中 按照常理来说#是Sql的注释 则在拼接的时候#后面的内容会被全部注释掉 然后就会导致语法上的报错 但这个理论在实际上测试的时候并没有如预期那样报错 仍能运行成功 也能正常的查询到 不过还是保险一点在这里写注释的时候还是写成xml注释  尽是不要写成sql注释#-->
                 </if>
+                update_time = now() <!--这里可以避免当里面的if都是空时 由于没字段可拼接所导致的语法报错(示例： update material where 1=0  这里没有set 字段名=字段值 在数据库中运行就会报错) 同时顺便维护了一下更新时间 因为在自定义Mapper中这个时间字段注解那里是控制不到的 得需要自己手动更新-->
             </set>
-        <where>
+        <where> <!-- 这里set跟where标签都是只有当里面的一个及一个以上的子标签满足条件时 关键字才会出现在拼接的sql中-->
             <choose>
                 <when test ="materialCode neq null and materialCode neq ''">
                     material_code = #{materialCode}
                 </when>
                 <otherwise>
-                    1 = 0 #这里如果用户没有传入materialCode的话就不执行相应的更新操作
+                    1 = 0 <!--这个地方是所有主流数据库的（永恒为假不报错-超级兼容表达式） 这里条件为假的设计意图是这里如果用户没有传入materialCode的话就不执行更新操作 避免全表更新的高风险-->
                 </otherwise>
             </choose>
+            and deleted = 0
         </where>
     </update>
-
-    <!--玩一下sql代码片段-->
-    <!-- 1. 先声明  声明的地方一般放在Mapper的最前面  这样可读性更好 这里只是单独练习一下-->
-    <sql id="MaterialField">
-        <!-- 输出的时候可以看到这里只要写了相关字段名的话就能看到对应的数据库值 如果没传的话就不会有值绑定失败就是null -->
-        id,material_code,material_name,material_type,spec,unit,enabled,create_time,update_time,deleted #这个地方开头报红是Idea自身的官方Bug 并不是语法上的问题  这里可以选择忽略它 运行的时候并不会报错
-    </sql>
 
     <select id = "getMaterialAllData" resultType = "com.yihua.bom.entity.Material">
    <!-- 2. 后引用 -->
         select
         <include refid="MaterialField">
         </include>
-        from material;
+        from material
+        where deleted = 0
     </select>
 </mapper>
