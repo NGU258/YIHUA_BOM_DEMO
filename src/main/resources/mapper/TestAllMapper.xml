@@ -13,6 +13,51 @@
         id,material_code,material_name,material_type,spec,unit,enabled,create_time,update_time,deleted <!-- 这个地方开头报红是Idea自身的官方Bug 并不是语法上的问题  这里可以选择忽略它 运行的时候并不会报错-->
     </sql>
 
+    <!--玩法二： 宏名宏中宏玩法 include中使用property 然后在sql中引用它-->
+    <sql id="BomHeaderPlayTableName">
+        ${tableName}.id,bom_code,bom_name,product_id,product_code,product_name,bom_version,bom_type,base_qty,unit,status,is_default,effective_date,expire_date,remark,create_time,update_time,deleted
+    </sql>
+
+    <!-- 玩法三： 跨界宏中宏玩法 这里refid的值就可以是其它Mapper的xml实现中sql标签内的id值-->
+    <select id="queryBomItemWithBomId" resultType = "map">
+        select
+            <include refid = "com.yihua.bom.Mapper.FairyCatMapper.queryBomItemByBomId"> <!-- 这里就是引用的FairyCatMapper对应xml实现内的sqlId -->
+                <property name = "tableName" value = "bom_item"></property>
+            </include>
+        from bom_item
+        <where>
+            <choose>
+                <when test = "bomId neq null">
+                    bom_id = #{bomId}
+                </when>
+                <otherwise>
+                    1 = 0 <!-- 逻辑就是bomId有值就查 没值就不查-->
+                </otherwise>
+            </choose>
+        </where>
+    </select>
+
+    <!-- 玩法四： 瞬移跨界宏中宏玩法 sql片段里面其实是可以使用动态sql的 也就是说既可以出现在查询列的位置 也可以出现在条件列的位置 -->
+    <select id="queryMaterialByMaterialType" resultType = "map">
+        select
+            <include refid="com.yihua.bom.Mapper.FairyCatMapper.queryMaterialField"></include>
+        from material
+        <include refid="com.yihua.bom.Mapper.FairyCatMapper.queryMaterialByMaterialType"></include>
+    </select>
+
+
+    <select id="queryBomHeaderWithActiveStatus" resultType = "com.yihua.bom.entity.BomHeader"> <!-- 这里查询的是启用状态的所有物料的BOM-->
+        <!--然后引用它玩一下 -->
+        select
+        <include refid="BomHeaderPlayTableName">
+            <property name = "tableName" value = "bom_header"></property>
+        </include>
+        from bom_header
+        <where>
+            status = 'active'
+        </where>
+    </select>
+
     <!-- 这里不管是实体类对象还是装实体类对象的list  返回值类型resultType仍需写成这个实体类对象的全限定名 这个封装到list的操作是Mybatis自己干的活 -->
     <select id="getMaterialMapList" resultType="java.util.Map"><!-- 这里我尝试返回的类型是一个Map  因为实体类里面的属性名跟属性值刚好是key跟value的关系 刚好是一个Map 这个实体类转Map的活就是交给Mybatis完成的-->
             select * from material where deleted = 0 limit 7,1 <!--尝试只取数据库中的第八行数据-->
@@ -86,4 +131,6 @@
         from material
         where deleted = 0
     </select>
+
+
 </mapper>

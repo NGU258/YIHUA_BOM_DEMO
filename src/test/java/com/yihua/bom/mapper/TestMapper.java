@@ -128,4 +128,31 @@ public class TestMapper {
         System.out.println("序列化后： "+JSON.toJSONString(materialPage, SerializerFeature.WriteMapNullValue));
     }
 
+
+    //宏名宏中宏玩法
+    @Test
+    public void testQueryBomHeaderWithActiveStatus(){
+        //拼接成功的sql： select bom_header.id,bom_code,bom_name,product_id,product_code,product_name,bom_version,bom_type,base_qty,unit,status,is_default,effective_date,expire_date,remark,create_time,update_time,deleted from bom_header WHERE status = 'active'
+        System.out.println(JSON.toJSONString(testAllMapper.queryBomHeaderWithActiveStatus(),SerializerFeature.WriteMapNullValue));
+    }
+
+    //跨界宏中宏玩法
+    @Test
+    public void testQueryBomItemWithBomId(){
+        //拼接好后的sql
+        // 当bomId不为null时：  select bom_item.id,bom_id,parent_id,material_id,material_code,material_name,material_spec,item_no,qty,unit,loss_rate,fixed_loss_qty,issue_type,process_code,process_name,remark,create_time,update_time,deleted from bom_item WHERE bom_id = ?
+        // 当bomId 为null时：  select bom_item.id,bom_id,parent_id,material_id,material_code,material_name,material_spec,item_no,qty,unit,loss_rate,fixed_loss_qty,issue_type,process_code,process_name,remark,create_time,update_time,deleted from bom_item WHERE 1 = 0
+        System.out.println(JSON.toJSONString(testAllMapper.queryBomItemWithBomId(1l),SerializerFeature.WriteMapNullValue));
+    }
+
+    //瞬移跨界宏中宏玩法
+    @Test
+    public void testQueryMaterialByMaterialType(){
+        //拼接后的sql
+        //有materialType:select material_code,material_name,material_type from material WHERE material_type=?
+        //无materialType:select material_code,material_name,material_type from material WHERE 1 = 0
+        System.out.println(JSON.toJSONString(testAllMapper.queryMaterialByMaterialType("semi_finished"),SerializerFeature.WriteMapNullValue));
+    }
+
+
 }

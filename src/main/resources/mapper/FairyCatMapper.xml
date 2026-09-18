@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<!--上面这个dtd文件是用的汉得Mapper对应xml中的配置-->
+
+<mapper namespace ="com.yihua.bom.Mapper.FairyCatMapper">
+
+    <sql id ="queryBomItemByBomId">
+        ${tableName}.id,bom_id,parent_id,material_id,material_code,material_name,material_spec,item_no,qty,unit,loss_rate,fixed_loss_qty,issue_type,process_code,process_name,remark,create_time,update_time,deleted
+    </sql>
+
+    <sql id ="queryMaterialField">
+        material_code,material_name,material_type
+    </sql>
+
+    <sql id="queryMaterialByMaterialType">
+        <where>
+            <choose>
+                <when test="materialType neq null and materialType neq ''">
+                    material_type=#{materialType}
+                </when>
+                <otherwise>
+                    1 = 0
+                </otherwise>
+            </choose>
+        </where>
+    </sql>
+</mapper>

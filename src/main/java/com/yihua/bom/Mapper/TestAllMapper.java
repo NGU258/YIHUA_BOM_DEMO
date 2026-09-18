@@ -1,6 +1,7 @@
 package com.yihua.bom.Mapper;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.yihua.bom.entity.BomHeader;
 import com.yihua.bom.entity.FairyCat;
 import com.yihua.bom.entity.Material;
 import org.apache.ibatis.annotations.Mapper;
@@ -30,4 +31,10 @@ public interface TestAllMapper {
 
     //测试一下sql代码片段
     List<Material> getMaterialAllData();
+
+    List<BomHeader> queryBomHeaderWithActiveStatus();
+
+    List<Map> queryBomItemWithBomId(Long bomId);
+
+    List<Map> queryMaterialByMaterialType(String materialType);
 }
