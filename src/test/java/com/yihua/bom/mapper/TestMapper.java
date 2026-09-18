@@ -84,7 +84,7 @@ public class TestMapper {
     //这里单元测试配合事务之后竟然真的没有影响数据库 AI说这里测试结束后这个事务会自动回滚 不会污染库中的数据
     @Transactional //发现控制台中打印了这一句： transaction manager [org.springframework.jdbc.support.JdbcTransactionManager@315105f]; rollback [true] 也就是回滚成功了
     public void testDynamicSqlSpecialCase(){
-       //00
+       //00  这里已通过测试验证： 单元测试这也是可以打断点来调试的 但要记得以Debug模式启动单元测试方法
         testAllMapper.updateMaterialName(null,null); //拼接出来的sql：update material SET update_time = now() WHERE 1 = 0 and deleted = 0
 
         //01
@@ -104,21 +104,21 @@ public class TestMapper {
         //当current传2的时候 也就是第二页开始 逻辑是查第二页所在的那3条数据 这时Mybatis-plus就会自动计算 拼接的sql中limit 3就变成了limit 3,3 也就是开头第一位数字从0跳到了3 刚好是跳过了前面三行数据 0 1 2
         //然后往后 当current=3时 就是limit 6,3 也就是跳过了3 4 5
         //接着当传current=4时 就是limit 9,3 跳过了6 7 8 测试发现符合预期
-        //这里不难发现 0 3 6 9是个等差数列 公差d刚好是传入的3(这里对应形参size)  根据等差数列通项公式an=a1+(n-1)d 其中d=3 a1=0 可以得出an=3n-3 所以limit的第一个参数就是通过an=3n-3的方式求出来的 这里对应代码就是假设limit的第一个参数是x 则x = current*size - size  (特殊情况：当current=0时处理逻辑跟current=1一样)
+        //这里不难发现 0 3 6 9是个等差数列 公差d刚好是传入的3(这里对应形参size)  根据等差数列通项公式an=a1+(n-1)d 其中d=3 a1=0 可以得出an=3n-3 所以limit的第一个参数就是通过an=3n-3的方式求出来的 这里对应代码就是假设limit的第一个参数是x 则x = current*size - size  (特殊情况：current=0的处理逻辑跟current=1一样 即if current=0 则x = 0)
         Page<Material> page = new Page<>(4,3);
         //查一下是启用状态的所有物料
         LambdaQueryWrapper<Material> lqw = new LambdaQueryWrapper<>();
         lqw.eq(Material::getEnabled,1);
 
         //先输出一下自定义Mapper中带分号的sql所执行返回的结果表
-        //运行后拼接出来的Sql: select id,material_code,material_name,material_type,spec,unit,enabled,create_time,update_time,deleted from material where deleted = 0;
-        testAllMapper.getMaterialAllData(); //这里我日志的级别是trace  所以我可以直接看这个sql执行后所返回查询到的数据 这里就不输出了
+        //运行后拼接出来的Sql: select id,material_code,material_name,material_type,spec,unit,enabled,create_time,update_time,deleted from material where deleted = 0
+        testAllMapper.getMaterialAllData(); //这里我日志的级别是trace  所以我可以直接在控制台看这个sql执行后所返回查询到的数据跟执行的sql 这里可以不用输出
 
         //当前所拼接的Sql： SELECT id,material_code,material_name,material_type,spec,unit,enabled,create_time,update_time,deleted FROM material WHERE deleted=0 AND (enabled = ?) LIMIT ?
         //此问题待后面有时间再研究： 当自定义Mapper接口方法声明的形参跟返回值都是IPage<Material>的时候 其xml实现中写的自定义sql后面不小心加上了分号 会不会因分页拦截器拦截sql后拼接了limit而报错 会不会自动去掉limit前面的这个分号 因为理论上如果没去掉的话会报语法错误
         Page<Material> materialPage = materialMapper.selectPage(page, lqw);
 
-        //拼接出来的Sql:select id,material_code,material_name,material_type,spec,unit,enabled,create_time,update_time,deleted from material where deleted = 0;
+        //拼接出来的Sql:select id,material_code,material_name,material_type,spec,unit,enabled,create_time,update_time,deleted from material where deleted = 0
         testAllMapper.getMaterialAllData();
 
         System.out.println("序列化前： "+materialPage);

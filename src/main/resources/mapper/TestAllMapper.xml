@@ -13,10 +13,9 @@
         id,material_code,material_name,material_type,spec,unit,enabled,create_time,update_time,deleted <!-- 这个地方开头报红是Idea自身的官方Bug 并不是语法上的问题  这里可以选择忽略它 运行的时候并不会报错-->
     </sql>
 
-
     <!-- 这里不管是实体类对象还是装实体类对象的list  返回值类型resultType仍需写成这个实体类对象的全限定名 这个封装到list的操作是Mybatis自己干的活 -->
     <select id="getMaterialMapList" resultType="java.util.Map"><!-- 这里我尝试返回的类型是一个Map  因为实体类里面的属性名跟属性值刚好是key跟value的关系 刚好是一个Map 这个实体类转Map的活就是交给Mybatis完成的-->
-            select * from material where deleted = 0 limit 7,1 #尝试只取数据库中的第八行数据
+            select * from material where deleted = 0 limit 7,1 <!--尝试只取数据库中的第八行数据-->
     </select>
 
 <!--    这里尝试一下java内建的类型别名 以查询物料表中的物料名为例 （知识定位：技术笔记htmlxmd中的关键词:效果相当于写了它的全限定名）-->
@@ -33,7 +32,7 @@
             </foreach>
 
             <if test="materialType neq null and materialType.size() > 0"> <!-- 这里的字符串是一个ONGL表达式 最后判断的话用英文 也就是neq这种形式 代表!= -->
-                and enabled = '1'  #这里玩一下where跟if动态sql标签的用法
+                and enabled = '1'  <!--这里玩一下where跟if动态sql标签的用法-->
             </if>
             and deleted = 0
         </where>
@@ -62,7 +61,7 @@
         update material <!-- 这里update关键字得自己写 标签不会自动带出来或者说生成这个sql片段-->
             <set> <!-- 这里可以使用set标签来完成动态更新某个字段值的效果 它还有个效果就是可以把拼接sql完工后把多余的逗号给去掉-->
                 <if test="materialName neq null and materialName neq ''">
-                    material_name = #{materialName}, <!-- 这里在sql后面写注释的话最好用Xml注释  也就是当前这个注释的写法 sql在拼接的时候会忽略掉这个xml注释 但如果是写成Sql注释#的话则会被拼接到生成的Sql中 按照常理来说#是Sql的注释 则在拼接的时候#后面的内容会被全部注释掉 然后就会导致语法上的报错 但这个理论在实际上测试的时候并没有如预期那样报错 仍能运行成功 也能正常的查询到 不过还是保险一点在这里写注释的时候还是写成xml注释  尽是不要写成sql注释#-->
+                    material_name = #{materialName}, <!-- 这里在sql后面写注释的话最好用Xml注释  也就是当前这个注释的写法 sql在拼接的时候会忽略掉这个xml注释 但如果是写成Sql注释#的话则会被拼接到生成的Sql中 按照常理来说#是Sql的注释 则在拼接的时候#后面的内容会被全部注释掉 然后就会导致语法上的报错 但这个理论在实际上测试的时候并没有如预期那样报错 仍能运行成功 也能正常的查询到（AI说Mybatis在检测的时候其实控制台中输出的这串sql字符串里面#的后面其实还有一个换行 所以Mybatis运行这个sql的时候并没有报错 效果是一样的） 保险一点在这里写注释的时候还是写成xml注释  尽量不要写成sql注释#-->
                 </if>
                 update_time = now() <!--这里可以避免当里面的if都是空时 由于没字段可拼接所导致的语法报错(示例： update material where 1=0  这里没有set 字段名=字段值 在数据库中运行就会报错) 同时顺便维护了一下更新时间 因为在自定义Mapper中这个时间字段注解那里是控制不到的 得需要自己手动更新-->
             </set>
@@ -72,7 +71,7 @@
                     material_code = #{materialCode}
                 </when>
                 <otherwise>
-                    1 = 0 <!--这个地方是所有主流数据库的（永恒为假不报错-超级兼容表达式） 这里条件为假的设计意图是这里如果用户没有传入materialCode的话就不执行更新操作 避免全表更新的高风险-->
+                    1 = 0 <!--这个地方是所有主流数据库的（永恒为假不报错-超级兼容表达式~） 这里条件为假的设计意图是这里如果用户没有传入materialCode的话就让where条件为假不执行更新操作 避免全表更新的高风险-->
                 </otherwise>
             </choose>
             and deleted = 0

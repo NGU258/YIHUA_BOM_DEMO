@@ -153,6 +153,12 @@
             <optional>true</optional>
         </dependency>
 
+<!--        这里尝试引入AI推荐的Jansi库来玩下里面的清屏方法能不能在控制台中进行清屏  测试验证发现只在cmd窗口中生效 在Idea的控制台中无效 -->
+        <dependency>
+            <groupId>org.fusesource.jansi</groupId>
+            <artifactId>jansi</artifactId>
+            <version>2.4.0</version>
+        </dependency>
 
 <!--    zero相关的依赖需要去汉得的Nexus仓库中获取  由于当前项目会上传到Github中 也就是代码会放在国外的位置  所以汉得的Nexus仓库地址就不写在当前项目中了 只有在需要的时候引入进来去汉得的Nexus中拉取需要的依赖jar 不需要的时候回滚删掉即可-->
         <!-- 玩一下hzero平台的导入跟导出 导入功能实现要用到的注解@ImportService在下面这个依赖中  -->
